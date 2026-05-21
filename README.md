@@ -1,4 +1,4 @@
-# Prediccion de cancelaciones hoteleras
+# Predicción de cancelaciones hoteleras
 
 ## Autores
 
@@ -10,6 +10,12 @@
 Sistema automático para predecir cancelaciones de reservas hoteleras usando múltiples modelos de Machine Learning.
 
 **Problema:** Clasificación binaria para predecir si una reserva será cancelada (`is_canceled = 1`) o no (`is_canceled = 0`).
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Lenguaje:** Python 3.10+
+- **Librerías Clave:** Pandas, NumPy, Scikit-Learn, Matplotlib, Seaborn
+- **Entorno:** Jupyter Notebooks (para experimentación) y Scripts modulares en producción
 
 ## Estructura del Proyecto
 
@@ -34,8 +40,7 @@ Sistema automático para predecir cancelaciones de reservas hoteleras usando mú
 │   └── predictor.py            # Funciones para hacer predicciones con modelos entrenados
 |
 ├── notebooks/                  # Notebooks exploratorios
-│   ├── EDA_hotel_bookings.ipynb
-│   └── SETUP.md                # Setup kernel
+│   └── EDA_hotel_bookings.ipynb
 |
 ├── outputs/                    # Resultados y gráficos
 |
@@ -43,11 +48,6 @@ Sistema automático para predecir cancelaciones de reservas hoteleras usando mú
 ├── .gitignore
 └── README.md
 ```
-
-## Requisitos previos
-
-- **Python 3.10** (recomendado 3.10.x, máximo 3.10.13)
-- pip >= 23.0
 
 ## Instalación
 
