@@ -51,15 +51,34 @@ Sistema automático para predecir cancelaciones de reservas hoteleras usando mú
 
 ## Instalación
 
-1. Crear entorno virtual
-   python -m venv venv
-   source venv/bin/activate # Windows: venv\Scripts\activate
+### 1. Entorno Virtual (Python 3.10)
 
-2. Instalar dependencias (todas incluidas)
-   pip install -r requirements.txt
+Crea y activa el entorno según tu sistema operativo:
 
-3. Para el kernel de Jupyter (ver notebooks/SETUP.md)
-   python -m ipykernel install --user --name ml-hotel --display-name "ML Hotel"
+```bash
+# Crear entorno (Asegúrate de usar Python 3.10)
+python -m venv venv
+
+# Activar en Linux / macOS
+source venv/bin/activate
+
+# Activar en Windows
+.\venv\Scripts\Activate
+```
+
+### 2. Dependencias y Kernel de Jupyter
+
+Con el entorno activado, ejecuta los siguientes comandos para instalar los paquetes y registrar el proyecto en Jupyter:
+
+```bash
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Registrar el Kernel en Jupyter
+python -m ipykernel install --user --name ml-hotel --display-name "ML Hotel"
+```
+
+> 💡 **Nota:** Al abrir el notebook, recuerda cambiar el kernel a **"ML Hotel"** desde el menú superior.
 
 ## Ejecución
 
