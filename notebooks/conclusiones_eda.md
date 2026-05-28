@@ -78,7 +78,7 @@
 | Cancelada    | 0,00  | 0      |
 | No cancelada | 0,11  | 8      |
 
-> **Ninguna reserva cancelada solicitó parking.** Pedir parking puede indicar itinerario planificado y compromiso con el viaje. 
+> **Ninguna reserva cancelada solicitó parking.** Pedir parking puede indicar itinerario planificado y compromiso con el viaje.
 
 **Variables categóricas:**
 
@@ -112,7 +112,7 @@
 
 ---
 
-## 8. Implicaciones para el modelado
+## 8. Implicaciones posteriores para el modelado
 
 | Modelo              | Scaling          | Encoding |
 | ------------------- | ---------------- | -------- |
@@ -121,5 +121,3 @@
 | Random Forest       | No necesario     | Label    |
 | XGBoost / LightGBM  | No necesario     | Label    |
 | Red Neuronal        | `MinMaxScaler`   | One-Hot  |
-
-> ⚠️ El split train/test debe realizarse **antes** de aplicar cualquier transformación que aprenda parámetros del dataset (scaler, encoder) para evitar contaminación del test set.
