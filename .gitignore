@@ -12,7 +12,7 @@ include/
 # 2. JUPYTER NOTEBOOKS (Archivos temporales)
 # ==========================================
 .ipynb_checkpoints/
-*.ipynb
+#*.ipynb
 */.ipynb_checkpoints/
 # Archivos de autoguardado y checkpoints de Jupyter Lab
 .virtual_documents/

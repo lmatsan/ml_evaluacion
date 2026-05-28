@@ -21,7 +21,7 @@
 | No cancelada (0) | 75.166    | 63%        |
 | Cancelada (1)    | 44.224    | 37%        |
 
-> **Desbalance moderado (63/37).** `accuracy` no es una métrica válida como referencia. Se usarán **AUC-ROC** y **F1-Score** como métricas principales. SMOTE se evaluará como mejora opcional.
+> **Desbalance moderado (63/37).** `accuracy` no es la mejor métrica como referencia. Se podrían usar **AUC-ROC** y **F1-Score** como métricas principales.
 
 ---
 
@@ -34,7 +34,7 @@
 - `company` → `'no company'` (cliente directo)
 - `country` → moda (`PRT`, bajo % de nulos)
 
-**Duplicados:** eliminados directamente (error de registro en contexto hotelero).
+**Duplicados:** eliminados directamente (error de registro).
 
 **Outliers en `adr`:** valores negativos eliminados + > percentil 99 eliminados.
 
@@ -78,14 +78,14 @@
 | Cancelada    | 0,00  | 0      |
 | No cancelada | 0,11  | 8      |
 
-> **Ninguna reserva cancelada solicitó parking.** Pedir parking indica itinerario planificado y compromiso real con el viaje. Es un predictor binario muy potente a pesar de su distribución asimétrica.
+> **Ninguna reserva cancelada solicitó parking.** Pedir parking puede indicar itinerario planificado y compromiso con el viaje. 
 
 **Variables categóricas:**
 
 - `City Hotel` cancela más que `Resort Hotel` (30% vs 22%)
 - `Online TA` cancela más (35%); `Corporate` menos (12%)
 - `Transient` cancela más (30%); `Group` menos (9%)
-- `Undefined` en `market_segment` eliminada (100% cancelación, error de registro)
+- `Undefined` en `market_segment` eliminada (100% +, error de registro)
 
 ---
 
