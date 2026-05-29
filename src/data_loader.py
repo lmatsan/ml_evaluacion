@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
  
 from config import (
-    ADR_WINSOR_PERCENTILE,
+    ADR_PERCENTILE,
     COLS_TO_DROP,
     COUNTRY_OTHER_LABEL,
     MARKET_SEGMENT_UNDEFINED,
