@@ -6,7 +6,7 @@ Responsabilidad única: cargar el CSV y devolver un DataFrame limpio y consisten
 aplicando todas las decisiones de limpieza tomadas durante el EDA.
 
  
-Lo que hace este módulo:
+Que hace este módulo:
     - Carga y valida el CSV
     - Elimina columnas con leakage o baja varianza (decisión fija del EDA)
     - Imputa nulos conocidos
