@@ -33,8 +33,8 @@ Sistema automático para predecir cancelaciones de reservas hoteleras usando mú
 |
 ├── src/
 │   ├── __init__.py
-│   ├── data_loader.py          # Carga de datos
-│   ├── preprocessor.py         # Preprocesamiento
+│   ├── data_loader.py          # Carga el CSV, aplica la limpieza del EDA.
+│   ├── preprocessor.py         # Recibe el dataframe limpio, realiza el split aplica encoding y scaling según el modelo.
 │   ├── model_trainer.py        # Entrenamiento
 │   └── evaluator.py            # Evaluación
 │   └── predictor.py            # Funciones para hacer predicciones con modelos entrenados
