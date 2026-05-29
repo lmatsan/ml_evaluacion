@@ -25,7 +25,6 @@ Lo que NO hace este módulo:
 import logging
 from pathlib import Path
  
-import numpy as np
 import pandas as pd
  
 from config import (
@@ -139,11 +138,11 @@ def _remove_sup99_adr(df: pd.DataFrame) -> pd.DataFrame:
     Elimina los valores superiores al percentil P99 en 'adr'.
     Valores por encima del umbral se recortan al umbral.
     """
-    cap = df["adr"].quantile(ADR_WINSOR_PERCENTILE)
+    cap = df["adr"].quantile(ADR_PERCENTILE)
     n_capped = (df["adr"] > cap).sum()
     df["adr"] = df["adr"].clip(upper=cap)
     logger.info(
-        f"'adr' winsorizado en P{int(ADR_WINSOR_PERCENTILE*100)}: "
+        f"'adr' winsorizado en P{int(ADR_PERCENTILE*100)}: "
         f"cap={cap:.2f}, registros afectados={n_capped}"
     )
     return df
