@@ -88,7 +88,7 @@
 - `City Hotel` cancela más que `Resort Hotel` (30% vs 22%)
 - `Online TA` cancela más (35%); `Corporate` menos (12%)
 - `Transient` cancela más (30%); `Group` menos (9%)
-- `Undefined` en `market_segment` eliminada (100% +, error de registro)
+- `Undefined` en `market_segment` eliminada (2 filas, error de registro)
 
 ---
 

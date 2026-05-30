@@ -70,6 +70,7 @@ def load_clean_data(path: Path = RAW_DATA_PATH) -> pd.DataFrame:
     df = _group_countries(df)
     df = _remove_invalid_rows(df)
     df = _remove_sup99_adr(df)
+    df = _collapse_duplicates(df)
 
     _validate_output(df)
     logger.info(f"Registros tras limpieza: {len(df):,}")
@@ -89,6 +90,22 @@ def _drop_leakage_columns(df: pd.DataFrame) -> pd.DataFrame:
     if dropped:
         logger.warning(f"Columnas a eliminar no encontradas (ya ausentes): {dropped}")
     return df.drop(columns=cols_present)
+
+def _collapse_duplicates(df: pd.DataFrame) -> pd.DataFrame:
+    """Colapsa filas idénticas para evitar Data Leakage en el modelo,
+    preservando el volumen de reserva en la columna 'room_count'.
+    """
+    n_before = len(df)
+    
+    # Colapsamos duplicados manteniendo los nulos para no perder registros
+    df = df.value_counts(dropna=False).reset_index(name="room_count")
+    
+    n_after = len(df)
+    logger.info(
+        f"Registros colapsados por duplicidad: {n_before:,} → {n_after:,} "
+        f"(Se creó la columna 'room_count')"
+    )
+    return df
 
 def _impute_children(df: pd.DataFrame) -> pd.DataFrame:
     """Imputa nulos en 'children' con 0 (decisión EDA: ausencia = 0 niños)."""
