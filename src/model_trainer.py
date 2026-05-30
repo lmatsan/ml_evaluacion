@@ -9,7 +9,6 @@ from sklearn.tree import DecisionTreeClassifier
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential
-
 from src import config
 from src.evaluator import build_model_comparison
 from src.evaluator import evaluate_classification_model

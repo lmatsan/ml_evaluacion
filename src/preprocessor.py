@@ -2,7 +2,6 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, StandardScaler
-
 from src import config
 from src.data_loader import load_dataset
 from src.data_loader import split_features_and_target
