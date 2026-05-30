@@ -1,39 +1,27 @@
 import joblib
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 from catboost import CatBoostClassifier
-from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential
 
 from src import config
-from src.data_loader import load_features_and_target
 from src.evaluator import build_model_comparison
 from src.evaluator import evaluate_classification_model
 from src.evaluator import export_comparative_roc_curve
 from src.evaluator import export_confusion_matrix_figure
 from src.evaluator import export_random_forest_feature_importance
 from src.evaluator import export_training_report
-
-MONTH_COLUMN = "arrival_date_month"
-COUNTRY_COLUMN = "country"
-ADR_COLUMN = "adr"
-AGENT_COLUMN = "agent"
-COMPANY_COLUMN = "company"
-CHILDREN_COLUMN = "children"
-MARKET_SEGMENT_COLUMN = "market_segment"
-HAS_AGENT_COLUMN = "has_agent"
-HAS_COMPANY_COLUMN = "has_company"
+from src.preprocessor import build_preprocessor
+from src.preprocessor import prepare_training_datasets
 
 
+# Traduce el nombre interno de cada modelo a un nombre mas legible.
 def get_model_display_name(model_key: str) -> str:
     display_names = {
         "logistic_regression": "Logistic Regression",
@@ -45,253 +33,25 @@ def get_model_display_name(model_key: str) -> str:
     return display_names[model_key]
 
 
-def _ensure_columns_exist(
-    dataframe: pd.DataFrame, required_columns: list[str]
-) -> None:
-    missing_columns = [
-        column_name
-        for column_name in required_columns
-        if column_name not in dataframe.columns
-    ]
-
-    if missing_columns:
-        missing_columns_text = ", ".join(missing_columns)
-        raise ValueError(
-            "The dataframe is missing required columns: "
-            f"{missing_columns_text}"
-        )
-
-
-def _validate_month_values(dataframe: pd.DataFrame) -> None:
-    month_values = dataframe[MONTH_COLUMN].astype(str).str.strip()
-    invalid_values = sorted(
-        value for value in month_values.unique() if value not in config.MONTH_MAPPING
-    )
-
-    if invalid_values:
-        invalid_values_text = ", ".join(invalid_values)
-        raise ValueError(
-            f"Unexpected values found in '{MONTH_COLUMN}': "
-            f"{invalid_values_text}"
-        )
-
-
+# Crea la carpeta de salida si todavia no existe.
 def _ensure_output_directories() -> None:
     config.OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+# Borra un archivo antiguo si ya no hace falta conservarlo.
 def _remove_file_if_exists(file_path) -> None:
     if file_path.exists():
         file_path.unlink()
 
 
-def clean_dataset(
-    X: pd.DataFrame, y: pd.Series
-) -> tuple[pd.DataFrame, pd.Series]:
-    required_columns = [
-        MONTH_COLUMN,
-        MARKET_SEGMENT_COLUMN,
-        ADR_COLUMN,
-        CHILDREN_COLUMN,
-        AGENT_COLUMN,
-        COMPANY_COLUMN,
-        *config.LEAKAGE_COLUMNS,
-        *config.REDUNDANT_COLUMNS,
-    ]
-    _ensure_columns_exist(X, required_columns)
-
-    combined_dataframe = X.copy()
-    combined_dataframe[y.name] = y.copy()
-    combined_dataframe = combined_dataframe.drop_duplicates().copy()
-    combined_dataframe = combined_dataframe[
-        combined_dataframe[MARKET_SEGMENT_COLUMN]
-        != config.UNDEFINED_MARKET_SEGMENT_VALUE
-    ].copy()
-    combined_dataframe = combined_dataframe[
-        combined_dataframe[ADR_COLUMN] >= 0
-    ].copy()
-
-    _validate_month_values(combined_dataframe)
-
-    combined_dataframe[MONTH_COLUMN] = (
-        combined_dataframe[MONTH_COLUMN]
-        .astype(str)
-        .str.strip()
-        .map(config.MONTH_MAPPING)
-    )
-    combined_dataframe[CHILDREN_COLUMN] = combined_dataframe[
-        CHILDREN_COLUMN
-    ].fillna(config.CHILDREN_IMPUTATION_VALUE)
-    combined_dataframe[AGENT_COLUMN] = combined_dataframe[
-        AGENT_COLUMN
-    ].fillna(config.AGENT_MISSING_VALUE)
-    combined_dataframe[COMPANY_COLUMN] = combined_dataframe[
-        COMPANY_COLUMN
-    ].fillna(config.COMPANY_MISSING_VALUE)
-    combined_dataframe = combined_dataframe.drop(
-        columns=config.LEAKAGE_COLUMNS + config.REDUNDANT_COLUMNS,
-        errors="ignore",
-    )
-
-    y = combined_dataframe.pop(y.name)
-    X = combined_dataframe
-    return X, y
-
-
-def split_train_validation(
-    X: pd.DataFrame, y: pd.Series
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    return train_test_split(
-        X,
-        y,
-        test_size=config.VALIDATION_SIZE,
-        random_state=config.RANDOM_STATE,
-        stratify=y,
-    )
-
-
-def fit_preprocessing_rules(X_train: pd.DataFrame) -> dict:
-    _ensure_columns_exist(
-        X_train,
-        [COUNTRY_COLUMN, ADR_COLUMN],
-    )
-
-    country_mode = X_train[COUNTRY_COLUMN].mode(dropna=True)
-    if country_mode.empty:
-        raise ValueError(
-            f"Column '{COUNTRY_COLUMN}' does not contain valid values."
-        )
-
-    country_fill_value = country_mode.iloc[0]
-    country_series = X_train[COUNTRY_COLUMN].fillna(country_fill_value)
-    top_countries = (
-        country_series.value_counts().head(config.COUNTRY_TOP_N).index.tolist()
-    )
-    adr_upper_bound = X_train[ADR_COLUMN].quantile(config.ADR_UPPER_QUANTILE)
-
-    return {
-        "country_fill_value": country_fill_value,
-        "top_countries": top_countries,
-        "adr_upper_bound": float(adr_upper_bound),
-    }
-
-
-def apply_preprocessing_rules(
-    X: pd.DataFrame,
-    y: pd.Series,
-    preprocessing_rules: dict,
-) -> tuple[pd.DataFrame, pd.Series]:
-    _ensure_columns_exist(
-        X,
-        [
-            COUNTRY_COLUMN,
-            ADR_COLUMN,
-            AGENT_COLUMN,
-            COMPANY_COLUMN,
-        ],
-    )
-
-    X = X.copy()
-    y = y.copy()
-    X[COUNTRY_COLUMN] = X[
-        COUNTRY_COLUMN
-    ].fillna(preprocessing_rules["country_fill_value"])
-    X = X[
-        X[ADR_COLUMN]
-        <= preprocessing_rules["adr_upper_bound"]
-    ].copy()
-    y = y.loc[X.index].copy()
-    X[COUNTRY_COLUMN] = X[
-        COUNTRY_COLUMN
-    ].where(
-        X[COUNTRY_COLUMN].isin(preprocessing_rules["top_countries"]),
-        config.COUNTRY_OTHER_LABEL,
-    )
-    X[HAS_AGENT_COLUMN] = (
-        X[AGENT_COLUMN] != config.AGENT_MISSING_VALUE
-    ).astype(int)
-    X[HAS_COMPANY_COLUMN] = (
-        X[COMPANY_COLUMN] != config.COMPANY_MISSING_VALUE
-    ).astype(int)
-    X = X.drop(
-        columns=[AGENT_COLUMN, COMPANY_COLUMN],
-        errors="ignore",
-    )
-    X[config.CATEGORICAL_FEATURES] = X[
-        config.CATEGORICAL_FEATURES
-    ].astype(str)
-    X = X[config.FINAL_FEATURE_COLUMNS].copy()
-    return X, y
-
-
-def prepare_training_datasets() -> tuple[
-    pd.DataFrame,
-    pd.DataFrame,
-    pd.Series,
-    pd.Series,
-    dict,
-]:
-    X, y = load_features_and_target()
-    X, y = clean_dataset(X, y)
-    (
-        X_train,
-        X_validation,
-        y_train,
-        y_validation,
-    ) = split_train_validation(X, y)
-    preprocessing_rules = fit_preprocessing_rules(X_train)
-    X_train, y_train = (
-        apply_preprocessing_rules(
-            X_train,
-            y_train,
-            preprocessing_rules,
-        )
-    )
-    X_validation, y_validation = (
-        apply_preprocessing_rules(
-            X_validation,
-            y_validation,
-            preprocessing_rules,
-        )
-    )
-    return (
-        X_train,
-        X_validation,
-        y_train,
-        y_validation,
-        preprocessing_rules,
-    )
-
-
-def build_preprocessor(model_key: str) -> ColumnTransformer:
-    if model_key == "logistic_regression":
-        numerical_transformer = StandardScaler()
-    elif model_key == "neural_network":
-        numerical_transformer = MinMaxScaler()
-    elif model_key in {"decision_tree", "random_forest", "catboost"}:
-        numerical_transformer = "passthrough"
-    else:
-        raise ValueError(f"Unsupported model key: {model_key}")
-
-    categorical_transformer = OneHotEncoder(
-        handle_unknown="ignore",
-        sparse_output=False,
-    )
-
-    return ColumnTransformer(
-        transformers=[
-            ("numerical", numerical_transformer, config.NUMERICAL_FEATURES),
-            ("categorical", categorical_transformer, config.CATEGORICAL_FEATURES),
-        ],
-        remainder="drop",
-    )
-
-
+# Reune los modelos clasicos que se van a comparar.
 def build_classical_models() -> dict:
     return {
         "logistic_regression": LogisticRegression(
+            C=config.LOGISTIC_C,
             max_iter=config.LOGISTIC_MAX_ITER,
             random_state=config.RANDOM_STATE,
+            solver=config.LOGISTIC_SOLVER,
         ),
         "decision_tree": DecisionTreeClassifier(
             max_depth=config.DECISION_TREE_MAX_DEPTH,
@@ -314,6 +74,7 @@ def build_classical_models() -> dict:
     }
 
 
+# Construye la red neuronal que se usara como uno de los modelos.
 def build_neural_network(input_dim: int) -> tf.keras.Model:
     model = Sequential()
     model.add(
@@ -335,6 +96,7 @@ def build_neural_network(input_dim: int) -> tf.keras.Model:
     return model
 
 
+# Entrena uno de los modelos clasicos con los datos preparados.
 def train_classical_model(
     model_key: str,
     model,
@@ -351,6 +113,7 @@ def train_classical_model(
     return pipeline
 
 
+# Entrena la red neuronal usando entrenamiento y validacion.
 def train_neural_network_model(
     X_train,
     y_train,
@@ -393,6 +156,7 @@ def train_neural_network_model(
     }
 
 
+# Entrena todos los modelos y guarda sus resultados para compararlos.
 def train_all_models() -> dict:
     (
         X_train,
@@ -405,7 +169,7 @@ def train_all_models() -> dict:
 
     classical_models = build_classical_models()
     for model_key, model in classical_models.items():
-        best_model = train_classical_model(
+        trained_model = train_classical_model(
             model_key,
             model,
             X_train,
@@ -413,17 +177,17 @@ def train_all_models() -> dict:
         )
         evaluation_result = evaluate_classification_model(
             get_model_display_name(model_key),
-            best_model,
+            trained_model,
             X_validation,
             y_validation,
             "classical",
         )
         model_results[model_key] = {
             **evaluation_result,
-            "model_object": best_model,
+            "model_object": trained_model,
         }
 
-    best_model = train_neural_network_model(
+    trained_model = train_neural_network_model(
         X_train,
         y_train,
         X_validation,
@@ -431,14 +195,14 @@ def train_all_models() -> dict:
     )
     evaluation_result = evaluate_classification_model(
         get_model_display_name("neural_network"),
-        best_model,
+        trained_model,
         X_validation,
         y_validation,
         "neural_network",
     )
     model_results["neural_network"] = {
         **evaluation_result,
-        "model_object": best_model,
+        "model_object": trained_model,
     }
     return {
         "model_results": model_results,
@@ -446,6 +210,7 @@ def train_all_models() -> dict:
     }
 
 
+# Elige el modelo que mejor resultado obtuvo segun la metrica principal.
 def select_best_model(model_results: dict) -> dict:
     return max(
         model_results.values(),
@@ -453,6 +218,7 @@ def select_best_model(model_results: dict) -> dict:
     )
 
 
+# Guarda el mejor modelo y las reglas necesarias para usarlo despues.
 def save_best_artifact(
     best_result: dict,
     preprocessing_rules: dict,
@@ -485,6 +251,7 @@ def save_best_artifact(
         )
 
 
+# Ejecuta de principio a fin todo el proceso de entrenamiento y guardado.
 def run_training_pipeline() -> dict:
     _ensure_output_directories()
     training_output = train_all_models()
@@ -529,6 +296,7 @@ def run_training_pipeline() -> dict:
     }
 
 
+# Lanza el entrenamiento principal cuando se ejecuta este archivo.
 def main() -> None:
     result = run_training_pipeline()
     print(result["report_path"])

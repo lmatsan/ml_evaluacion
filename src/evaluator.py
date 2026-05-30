@@ -14,6 +14,7 @@ from sklearn.metrics import roc_curve
 
 from src import config
 
+# Saca la probabilidad de cancelación usando el tipo de modelo adecuado.
 def _extract_probabilities(model_object, X, model_type: str):
     if model_type == "classical":
         return model_object.predict_proba(X)[:, 1]
@@ -31,10 +32,12 @@ def _extract_probabilities(model_object, X, model_type: str):
     raise ValueError(f"Unsupported model: {model_type}")
 
 
+# Convierte las probabilidades en una decisión final de cancelar o no.
 def _build_predictions(y_proba):
     return (y_proba >= 0.5).astype(int)
 
 
+# Calcula las métricas principales para saber cómo rindió un modelo.
 def evaluate_classification_model(
     model_name,
     model_object,
@@ -84,6 +87,7 @@ def evaluate_classification_model(
     }
 
 
+# Junta los resultados de todos los modelos en una tabla comparable.
 def build_model_comparison(results: list[dict]) -> pd.DataFrame:
     comparison_rows = []
 
@@ -107,6 +111,7 @@ def build_model_comparison(results: list[dict]) -> pd.DataFrame:
     return comparison_dataframe
 
 
+# Genera una imagen con la curva ROC de todos los modelos juntos.
 def export_comparative_roc_curve(results: list[dict], output_path: Path) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     figure, axis = plt.subplots(figsize=(8, 6))
@@ -129,6 +134,7 @@ def export_comparative_roc_curve(results: list[dict], output_path: Path) -> Path
     return output_path
 
 
+# Genera una imagen con la matriz de confusión del mejor modelo.
 def export_confusion_matrix_figure(
     model_name: str,
     confusion_matrix_values,
@@ -161,6 +167,7 @@ def export_confusion_matrix_figure(
     return output_path
 
 
+# Genera una imagen con las variables más importantes del Random Forest.
 def export_random_forest_feature_importance(
     model_object,
     output_path: Path,
@@ -202,6 +209,7 @@ def export_random_forest_feature_importance(
     return output_path
 
 
+# Convierte la tabla comparativa en texto para incluirla en el informe final.
 def _build_markdown_table(comparison_dataframe: pd.DataFrame) -> str:
     table_columns = [
         "model_name",
@@ -234,6 +242,7 @@ def _build_markdown_table(comparison_dataframe: pd.DataFrame) -> str:
     return "\n".join(rows)
 
 
+# Crea el informe final con el mejor modelo y los resultados comparados.
 def export_training_report(
     comparison_df: pd.DataFrame,
     output_path: Path,

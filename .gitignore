@@ -2,6 +2,7 @@
 # 1. ENTORNOS VIRTUALES (Python)
 # ==========================================
 venv/
+.venv/
 env/
 ENV/
 bin/

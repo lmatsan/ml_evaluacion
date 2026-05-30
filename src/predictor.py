@@ -4,13 +4,18 @@ import pandas as pd
 import tensorflow as tf
 
 from src import config
-from src.model_trainer import apply_preprocessing_rules
-from src.model_trainer import clean_dataset
+from src.data_loader import split_features_and_target
+from src.preprocessor import apply_fixed_preprocessing
+from src.preprocessor import apply_preprocessing_rules
+from src.preprocessor import clean_dataset
 
+
+# Convierte una peticion individual en una tabla con una sola fila.
 def payload_to_dataframe(payload: dict) -> pd.DataFrame:
     return pd.DataFrame([payload])
 
 
+# Carga del disco el mejor modelo ya entrenado y sus reglas de preparacion.
 def load_best_model_artifact() -> dict:
     has_classical_model = config.BEST_MODEL_PIPELINE_PATH.exists()
     has_neural_model = config.BEST_NEURAL_NETWORK_MODEL_PATH.exists()
@@ -53,33 +58,32 @@ def load_best_model_artifact() -> dict:
 
     raise FileNotFoundError(
         "no trained model"
-
     )
 
 
+# Prepara los datos nuevos con las mismas reglas usadas durante el entrenamiento.
 def prepare_features(
     X: pd.DataFrame,
     preprocessing_rules: dict,
 ) -> pd.DataFrame:
-    y = pd.Series(
-        [0],
-        index=X.index,
-        name=config.TARGET_COLUMN,
-    )
-    X, y = clean_dataset(
-        X,
-        y,
-    )
-    X, _ = apply_preprocessing_rules(
-        X,
-        y,
+    df_raw = X.copy()
+    df_raw[config.TARGET_COLUMN] = 0
+    df_cleaned = clean_dataset(df_raw)
+    df_preprocessed = apply_fixed_preprocessing(df_cleaned)
+    df_model_input = apply_preprocessing_rules(
+        df_preprocessed,
         preprocessing_rules,
+    )
+    X, _ = split_features_and_target(
+        df_model_input,
+        config.TARGET_COLUMN,
     )
     if X.empty:
         raise ValueError("payload removed by preprocessing rules")
     return X
 
 
+# Devuelve la prediccion final de cancelacion para una nueva reserva.
 def predict_booking_from_payload(
     payload: dict,
 ) -> dict:

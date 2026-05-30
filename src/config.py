@@ -15,12 +15,15 @@ BEST_PREPROCESSING_RULES_PATH = (
     OUTPUTS_DIR / "best_model_preprocessing_rules.joblib"
 )
 TRAINING_REPORT_PATH = OUTPUTS_DIR / "training_report.md"
+
 TARGET_COLUMN = "is_canceled"
 MAIN_METRIC = "roc_auc"
 CLASS_LABELS = ["Not canceled", "Canceled"]
+
 RANDOM_FOREST_IMPORTANCE_TOP_N = 20
 VALIDATION_SIZE = 0.2
 RANDOM_STATE = 42
+
 COUNTRY_TOP_N = 11
 ADR_UPPER_QUANTILE = 0.99
 AGENT_MISSING_VALUE = "no agent"
@@ -28,7 +31,10 @@ COMPANY_MISSING_VALUE = "no company"
 COUNTRY_OTHER_LABEL = "OTHER"
 UNDEFINED_MARKET_SEGMENT_VALUE = "Undefined"
 CHILDREN_IMPUTATION_VALUE = 0
-LOGISTIC_MAX_ITER = 1000
+
+LOGISTIC_C = 0.1
+LOGISTIC_MAX_ITER = 500
+LOGISTIC_SOLVER = "liblinear"
 DECISION_TREE_MAX_DEPTH = 8
 RANDOM_FOREST_N_ESTIMATORS = 200
 CATBOOST_ITERATIONS = 300
@@ -38,6 +44,7 @@ NEURAL_NETWORK_HIDDEN_UNITS = [64, 32]
 NEURAL_NETWORK_EPOCHS = 30
 NEURAL_NETWORK_BATCH_SIZE = 32
 EARLY_STOPPING_PATIENCE = 5
+
 LEAKAGE_COLUMNS = [
     "reservation_status",
     "reservation_status_date",
@@ -45,6 +52,7 @@ LEAKAGE_COLUMNS = [
 REDUNDANT_COLUMNS = [
     "arrival_date_week_number",
 ]
+
 MONTH_MAPPING = {
     "January": 1,
     "February": 2,
@@ -59,6 +67,39 @@ MONTH_MAPPING = {
     "November": 11,
     "December": 12,
 }
+
+BASE_TYPE_CASTS = {
+    "hotel": "str",
+    "arrival_date_month": "str",
+    "meal": "str",
+    "market_segment": "str",
+    "distribution_channel": "str",
+    "is_repeated_guest": "str",
+    "reserved_room_type": "str",
+    "assigned_room_type": "str",
+    "deposit_type": "str",
+    "customer_type": "str",
+}
+
+FINAL_TYPE_CASTS = {
+    "hotel": "str",
+    "meal": "str",
+    "country": "str",
+    "market_segment": "str",
+    "distribution_channel": "str",
+    "is_repeated_guest": "str",
+    "reserved_room_type": "str",
+    "assigned_room_type": "str",
+    "deposit_type": "str",
+    "customer_type": "str",
+}
+
+FIXED_FILL_VALUES = {
+    "children": CHILDREN_IMPUTATION_VALUE,
+    "agent": AGENT_MISSING_VALUE,
+    "company": COMPANY_MISSING_VALUE,
+}
+
 RAW_DATASET_COLUMNS = [
     "hotel",
     "is_canceled",
@@ -93,6 +134,7 @@ RAW_DATASET_COLUMNS = [
     "reservation_status",
     "reservation_status_date",
 ]
+
 CATEGORICAL_FEATURES = [
     "hotel",
     "meal",
@@ -105,6 +147,7 @@ CATEGORICAL_FEATURES = [
     "deposit_type",
     "customer_type",
 ]
+
 NUMERICAL_FEATURES = [
     "lead_time",
     "arrival_date_year",
@@ -125,4 +168,6 @@ NUMERICAL_FEATURES = [
     "has_agent",
     "has_company",
 ]
+
 FINAL_FEATURE_COLUMNS = CATEGORICAL_FEATURES + NUMERICAL_FEATURES
+FINAL_DATAFRAME_COLUMNS = FINAL_FEATURE_COLUMNS + [TARGET_COLUMN]

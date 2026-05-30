@@ -49,6 +49,7 @@ class BookingPredictionResponse(BaseModel):
 app = FastAPI(title="Cancel Predictor")
 
 
+# Recibe una reserva nueva y devuelve la predicción del modelo entrenado.
 @app.post("/predict", response_model=BookingPredictionResponse)
 def predict_endpoint(
     payload: BookingPredictionRequest,
@@ -60,4 +61,3 @@ def predict_endpoint(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-
