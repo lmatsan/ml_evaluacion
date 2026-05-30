@@ -3,14 +3,11 @@ from pathlib import Path
 from typing import Union
 import pandas as pd
  
-from config import (
-    ADR_PERCENTILE,
+from src.config import (
     COLS_TO_DROP,
-    COUNTRY_OTHER_LABEL,
     MARKET_SEGMENT_UNDEFINED,
     RAW_DATA_PATH,
     TARGET_COL,
-    TOP_COUNTRIES,
     RAW_DATASET_COLUMNS
 )
 
@@ -66,9 +63,7 @@ def load_clean_data(
     df = _drop_leakage_columns(df)
     df = _impute_children(df)
     df = _binarize_agent_company(df)
-    # df = _group_countries(df)
     df = _remove_invalid_rows(df)
-    # df = _remove_sup99_adr(df)
     df = _collapse_duplicates(df)
 
     _validate_output(df)
@@ -140,18 +135,6 @@ def _binarize_agent_company(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _group_countries(df: pd.DataFrame) -> pd.DataFrame:
-    """Mantiene los países top y agrupa el resto como minoritarios en OTHER."""
-    original_unique = df["country"].nunique()
-    df["country"] = df["country"].apply(
-        lambda x: x if x in TOP_COUNTRIES else COUNTRY_OTHER_LABEL
-    )
-    logger.info(
-        f"'country' agrupada: {original_unique} valores únicos → "
-        f"{df['country'].nunique()} (top + OTHER)"
-    )
-    return df
-
 def _remove_invalid_rows(df: pd.DataFrame) -> pd.DataFrame:
     """ Elimina filas inválidas identificadas en el EDA:
         - adr negativos (precio negativo no tiene sentido de negocio)
@@ -166,18 +149,6 @@ def _remove_invalid_rows(df: pd.DataFrame) -> pd.DataFrame:
     df = df[~mask_invalid].copy()
     n_removed = n_before - len(df)
     logger.info(f"Filas eliminadas (adr<0 o market_segment=Undefined): {n_removed}")
-    return df
-
-
-def _remove_sup99_adr(df: pd.DataFrame) -> pd.DataFrame:
-    """Aplica técnicas de Winsorización sobre el precio (adr) usando el percentil P99."""
-    cap = df["adr"].quantile(ADR_PERCENTILE)
-    n_capped = (df["adr"] > cap).sum()
-    df["adr"] = df["adr"].clip(upper=cap)
-    logger.info(
-        f"'adr' winsorizado en P{int(ADR_PERCENTILE*100)}: "
-        f"cap={cap:.2f}, registros afectados={n_capped}"
-    )
     return df
 
 
