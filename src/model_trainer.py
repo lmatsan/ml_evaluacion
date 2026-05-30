@@ -19,7 +19,9 @@ from src.evaluator import export_random_forest_feature_importance
 from src.evaluator import export_training_report
 from src.preprocessor import build_preprocessor
 from src.preprocessor import prepare_training_datasets
-
+import mlflow
+import mlflow.sklearn
+import mlflow.keras
 
 # Traduce el nombre interno de cada modelo a un nombre mas legible.
 def get_model_display_name(model_key: str) -> str:
@@ -32,6 +34,30 @@ def get_model_display_name(model_key: str) -> str:
     }
     return display_names[model_key]
 
+def _log_model_to_mlflow(model_key: str, trained_model, evaluation_result: dict) -> None:
+    """Registra de forma unificada parámetros, métricas y artefactos en MLflow."""
+    display_name = get_model_display_name(model_key)
+    
+    with mlflow.start_run(run_name=display_name):
+        
+        # Se loguea hiperparámetros de forma dinámica
+        if model_key == "neural_network":
+            mlflow.log_param("hidden_units", str(config.NEURAL_NETWORK_HIDDEN_UNITS))
+            mlflow.log_param("batch_size", config.NEURAL_NETWORK_BATCH_SIZE)
+            mlflow.log_param("epochs", config.NEURAL_NETWORK_EPOCHS)
+        elif hasattr(trained_model, "named_steps"):  # Es un Pipeline clásico de Sklearn
+            actual_params = trained_model.named_steps["model"].get_params()
+            mlflow.log_params({f"model_{k}": v for k, v in actual_params.items()})
+        
+        # 2. Loguear métricas
+        mlflow.log_metric(config.MAIN_METRIC, evaluation_result[config.MAIN_METRIC])
+        
+        # 3. Guardar el artefacto binario según el tipo
+        if model_key == "neural_network":
+            # Guardamos el modelo de Keras (extraído del diccionario contenedor)
+            mlflow.keras.log_model(trained_model["model"], artifact_path="neural_network")
+        else:
+            mlflow.sklearn.log_model(trained_model, artifact_path=model_key)
 
 # Crea la carpeta de salida si todavia no existe.
 def _ensure_output_directories() -> None:
@@ -42,6 +68,7 @@ def _ensure_output_directories() -> None:
 def _remove_file_if_exists(file_path) -> None:
     if file_path.exists():
         file_path.unlink()
+
 
 
 # Reune los modelos clasicos que se van a comparar.
@@ -55,10 +82,12 @@ def build_classical_models() -> dict:
         ),
         "decision_tree": DecisionTreeClassifier(
             max_depth=config.DECISION_TREE_MAX_DEPTH,
+            min_samples_split=config.DECISION_TREE_MIN_SAMPLES_SPLIT,
             random_state=config.RANDOM_STATE,
         ),
         "random_forest": RandomForestClassifier(
             n_estimators=config.RANDOM_FOREST_N_ESTIMATORS,
+            max_depth=config.RANDOM_FOREST_MAX_DEPTH,
             random_state=config.RANDOM_STATE,
             n_jobs=-1,
         ),
@@ -115,13 +144,15 @@ def train_classical_model(
         "logistic_regression": config.LOGISTIC_C is None,
         "decision_tree": config.DECISION_TREE_MAX_DEPTH is None,
         "random_forest": config.RANDOM_FOREST_N_ESTIMATORS is None,
+        "catboost": config.CATBOOST_ITERATIONS is None,
     }.get(model_key, False)
 
     # MAPEADO DE MALLAS DE BÚSQUEDA
     grids = {
         "logistic_regression": config.LOGISTIC_PARAM_GRID,
         "decision_tree": config.DECISION_TREE_PARAM_GRID,
-        "random_forest": config.RANDOM_FOREST_GRID,
+        "random_forest": config.RANDOM_FOREST_PARAM_GRID,
+        "catboost": config.CATBOOST_PARAM_GRID,
     }
     # SI ESTÁ VACÍO: Disparamos la optimización inteligente
     if is_empty and model_key in grids:
@@ -208,6 +239,7 @@ def train_all_models() -> dict:
         preprocessing_rules,
     ) = prepare_training_datasets()
     model_results = {}
+    mlflow.set_experiment(config.MLFLOW_EXPERIMENT_NAME)
 
     classical_models = build_classical_models()
     for model_key, model in classical_models.items():
@@ -224,6 +256,9 @@ def train_all_models() -> dict:
             y_validation,
             "classical",
         )
+        # Tracking centralizado
+        _log_model_to_mlflow(model_key, trained_model, evaluation_result)
+
         model_results[model_key] = {
             **evaluation_result,
             "model_object": trained_model,
@@ -242,6 +277,8 @@ def train_all_models() -> dict:
         y_validation,
         "neural_network",
     )
+    # Tracking centralizado utilizando la misma función
+    _log_model_to_mlflow("neural_network", trained_model, evaluation_result)
     model_results["neural_network"] = {
         **evaluation_result,
         "model_object": trained_model,

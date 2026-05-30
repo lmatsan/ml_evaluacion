@@ -123,7 +123,7 @@ FINAL_FEATURE_COLUMNS = CATEGORICAL_COLS + NUMERIC_COLS
 FINAL_DATAFRAME_COLUMNS = FINAL_FEATURE_COLUMNS + [TARGET_COL]
 
 # =====================================================================
-# 3. Parámetros del Pipeline (Limpieza y Modelado)
+# 3. Parámetros del Pipeline (Limpieza y Modelado) y reportes
 # =====================================================================
 VALIDATION_SIZE = 0.2
 RANDOM_STATE = 42
@@ -152,12 +152,15 @@ FIXED_FILL_VALUES = {
     "agent": AGENT_MISSING_VALUE,
     "company": COMPANY_MISSING_VALUE,
 }
+# Configuración de gráficas e informes
+RANDOM_FOREST_IMPORTANCE_TOP_N = 20  # Controla el número de barras en el plot
 
 # =====================================================================
 # 4. Hiperparámetros de los Modelos (Aportación de tu compañero)
 # =====================================================================
+
 # 1. Regresión Logística
-LOGISTIC_C = None  # <-- Lo ponemos en None para la primera vuelta.
+LOGISTIC_C = 10.0  # <-- Lo ponemos en None para la primera vuelta.
 LOGISTIC_MAX_ITER = 500
 LOGISTIC_SOLVER = "liblinear"
 
@@ -166,7 +169,8 @@ LOGISTIC_PARAM_GRID = {
 }
 
 # 2. Árbol de Decisión
-DECISION_TREE_MAX_DEPTH = None  # <-- Lo ponemos en None para la primera vuelta
+DECISION_TREE_MAX_DEPTH = 12  # <-- Lo ponemos en None para la primera vuelta
+DECISION_TREE_MIN_SAMPLES_SPLIT = 10  # <-- Lo ponemos en None para la primera vuelta
 
 DECISION_TREE_PARAM_GRID = {
     "model__max_depth": [4, 6, 8, 12],
@@ -174,12 +178,29 @@ DECISION_TREE_PARAM_GRID = {
 }
 
 # 3. Random Forest
-RANDOM_FOREST_N_ESTIMATORS = None  # <-- Lo ponemos en None para la primera vuelta
+RANDOM_FOREST_N_ESTIMATORS = 200  # <-- Lo ponemos en None para la primera vuelta
+RANDOM_FOREST_MAX_DEPTH = None
 
 RANDOM_FOREST_PARAM_GRID = {
     "model__n_estimators": [100, 200],
     "model__max_depth": [8, 12, None]
 }
+# 4. CatBoost
+CATBOOST_ITERATIONS = 300   # Número de árboles a construir (Hiperparámetro)
+CATBOOST_DEPTH = 6          # Profundidad de los árboles (Hiperparámetro)
+CATBOOST_LEARNING_RATE = 0.05
+
+# Malla de optimización por si decides ponerlo en None más adelante
+CATBOOST_PARAM_GRID = {
+    "model__iterations": [150, 300],
+    "model__depth": [4, 6]
+}
+
+# 5. Red Neuronal (Estructura fija de capas)
+NEURAL_NETWORK_HIDDEN_UNITS = [64, 32]  # Capa 1: 64 neuronas, Capa 2: 32 neuronas
+NEURAL_NETWORK_EPOCHS = 30
+NEURAL_NETWORK_BATCH_SIZE = 32
+EARLY_STOPPING_PATIENCE = 5
 
 # =====================================================================
 # 5. Tracking y Despliegue (MLflow / Registro de Modelos)

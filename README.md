@@ -148,7 +148,7 @@ Contract (`POST /predict`):
 }
 ```
 
-## Roles de la Pareja
+## Roles
 
 Lorep ipsum
 
@@ -161,3 +161,20 @@ Lorep ipsum
 ## Limitaciones y Mejoras Futuras
 
 Lorep ipsum
+
+## Seguimiento de Experimentos (MLflow)
+
+Este proyecto utiliza **MLflow** para registrar los hiperparámetros, métricas y modelos generados en cada entrenamiento. Esto permite comparar diferentes ejecuciones y mantener un registro del "modelo ganador".
+
+### Cómo ver los experimentos localmente:
+
+1. Asegúrate de tener las dependencias instaladas.
+2. Levanta el servidor local de MLflow ejecutando el siguiente comando en la raíz del proyecto:
+   ```bash
+   mlflow ui
+   ```
+
+```
+3. Abre tu navegador e ingresa a http://127.0.0.1:5000 para ver el panel de control con las gráficas y comparativas.
+> **Nota:** La carpeta mlruns/ está excluida en el .gitignore para evitar subir archivos pesados (como los modelos .pkl) al repositorio. Cada entrenamiento se guarda localmente en tu máquina.
+```
