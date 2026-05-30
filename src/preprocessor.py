@@ -31,7 +31,7 @@ def _ensure_columns_exist(
     if missing_columns:
         missing_columns_text = ", ".join(missing_columns)
         raise ValueError(
-            "The dataframe is missing required columns: "
+            "dataframe missing"
             f"{missing_columns_text}"
         )
 
@@ -46,7 +46,7 @@ def _validate_month_values(dataframe: pd.DataFrame) -> None:
     if invalid_values:
         invalid_values_text = ", ".join(invalid_values)
         raise ValueError(
-            f"Unexpected values found in '{MONTH_COLUMN}': "
+            f"unexpected values in '{MONTH_COLUMN}': "
             f"{invalid_values_text}"
         )
 
@@ -126,7 +126,7 @@ def fit_preprocessing_rules(df_train: pd.DataFrame) -> dict:
     country_mode = df_train[COUNTRY_COLUMN].mode(dropna=True)
     if country_mode.empty:
         raise ValueError(
-            f"Column '{COUNTRY_COLUMN}' does not contain valid values."
+            f"invalid values '{COUNTRY_COLUMN}'"
         )
 
     country_fill_value = country_mode.iloc[0]

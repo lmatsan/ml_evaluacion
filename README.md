@@ -156,6 +156,7 @@ Lorep ipsum
 
 - Hemos elegido AUC-ROC como métrica principal porque el dataset no está perfectamente equilibrado: hay más reservas no canceladas que canceladas. Por eso, medir solo el porcentaje de aciertos puede engañar. AUC-ROC nos ayuda a ver mejor si el modelo realmente distingue bien entre reservas que se cancelan y reservas que no.
 - Elegimos `CatBoost` como modelo principal dentro de los modelos de boosting porque funciona muy bien con datasets en formato tabla, no requiere un preprocesamiento tan complejo y además su implementación es más sencilla.
+- Para mejorar la organización y mantenibilidad del código, se extrajo la lógica de preprocesamiento de model_trainer.py a un módulo independiente, preprocessor.py. De esta forma, el entrenamiento del modelo y la preparación de los datos quedan separados en responsabilidades distintas.
 
 ## Limitaciones y Mejoras Futuras
 
