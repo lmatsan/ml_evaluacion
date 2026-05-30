@@ -14,8 +14,13 @@ Sistema automático para predecir cancelaciones de reservas hoteleras usando mú
 ## 🛠️ Tecnologías Utilizadas
 
 - **Lenguaje:** Python 3.10+
-- **Librerías Clave:** Pandas, NumPy, Scikit-Learn, Matplotlib, Seaborn
-- **Entorno:** Jupyter Notebooks (para experimentación) y Scripts modulares en producción
+- **Manipulación y análisis de datos:** Pandas, NumPy, SciPy
+- **Machine Learning clásico:** Scikit-Learn
+- **Gradient Boosting:** CatBoost
+- **Red neuronal multicapa:** TensorFlow Keras
+- **Visualización y reporting:** Matplotlib, Seaborn, Plotly
+- **Persistencia de modelos:** Joblib
+- **Entorno de trabajo:** Jupyter Notebooks (para EDA y experimentación) y scripts modulares en `src/`
 
 ## Estructura del Proyecto
 
@@ -82,7 +87,10 @@ python -m ipykernel install --user --name ml-hotel --display-name "ML Hotel"
 
 ## Ejecución
 
-Lorep ipsum
+python -m venv venv
+.\venv\Scripts\Activate
+pip install -r requirements.txt
+python -m src.model_trainer
 
 ## Roles de la Pareja
 
@@ -90,7 +98,8 @@ Lorep ipsum
 
 ## Resultados y Conclusiones
 
-Lorep ipsum
+- Hemos elegido AUC-ROC como métrica principal porque el dataset no está perfectamente equilibrado: hay más reservas no canceladas que canceladas. Por eso, medir solo el porcentaje de aciertos puede engañar. AUC-ROC nos ayuda a ver mejor si el modelo realmente distingue bien entre reservas que se cancelan y reservas que no.
+- Elegimos "CatBoost" como modelo principal dentro de los modelos de boosting porque funciona muy bien con datasets en formato tabla, no requiere un preprocesamiento tan complejo y además su implementacion es mas sencilla.
 
 ## Limitaciones y Mejoras Futuras
 
