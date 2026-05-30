@@ -156,24 +156,30 @@ FIXED_FILL_VALUES = {
 # =====================================================================
 # 4. Hiperparámetros de los Modelos (Aportación de tu compañero)
 # =====================================================================
-RANDOM_FOREST_IMPORTANCE_TOP_N = 20
-
-LOGISTIC_C = 0.1
+# 1. Regresión Logística
+LOGISTIC_C = None  # <-- Lo ponemos en None para la primera vuelta.
 LOGISTIC_MAX_ITER = 500
 LOGISTIC_SOLVER = "liblinear"
 
-DECISION_TREE_MAX_DEPTH = 8
+LOGISTIC_PARAM_GRID = {
+    "model__C": [0.01, 0.1, 1.0, 10.0]
+}
 
-RANDOM_FOREST_N_ESTIMATORS = 200
+# 2. Árbol de Decisión
+DECISION_TREE_MAX_DEPTH = None  # <-- Lo ponemos en None para la primera vuelta
 
-CATBOOST_ITERATIONS = 300
-CATBOOST_DEPTH = 6
-CATBOOST_LEARNING_RATE = 0.05
+DECISION_TREE_PARAM_GRID = {
+    "model__max_depth": [4, 6, 8, 12],
+    "model__min_samples_split": [2, 5, 10]
+}
 
-NEURAL_NETWORK_HIDDEN_UNITS = [64, 32]
-NEURAL_NETWORK_EPOCHS = 30
-NEURAL_NETWORK_BATCH_SIZE = 32
-EARLY_STOPPING_PATIENCE = 5
+# 3. Random Forest
+RANDOM_FOREST_N_ESTIMATORS = None  # <-- Lo ponemos en None para la primera vuelta
+
+RANDOM_FOREST_PARAM_GRID = {
+    "model__n_estimators": [100, 200],
+    "model__max_depth": [8, 12, None]
+}
 
 # =====================================================================
 # 5. Tracking y Despliegue (MLflow / Registro de Modelos)

@@ -2,6 +2,7 @@ import joblib
 import numpy as np
 import tensorflow as tf
 from catboost import CatBoostClassifier
+from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
@@ -102,12 +103,54 @@ def train_classical_model(
     X_train,
     y_train,
 ) -> Pipeline:
+    """Entrena un modelo clásico usando parámetros fijos o estimándolos con GridSearch."""
     pipeline = Pipeline(
         steps=[
             ("preprocessor", build_preprocessor(model_key)),
             ("model", model),
         ]
     )
+    # MAPEADO DE CONDICIONES: ¿Están vacíos los parámetros críticos?
+    is_empty = {
+        "logistic_regression": config.LOGISTIC_C is None,
+        "decision_tree": config.DECISION_TREE_MAX_DEPTH is None,
+        "random_forest": config.RANDOM_FOREST_N_ESTIMATORS is None,
+    }.get(model_key, False)
+
+    # MAPEADO DE MALLAS DE BÚSQUEDA
+    grids = {
+        "logistic_regression": config.LOGISTIC_PARAM_GRID,
+        "decision_tree": config.DECISION_TREE_PARAM_GRID,
+        "random_forest": config.RANDOM_FOREST_GRID,
+    }
+    # SI ESTÁ VACÍO: Disparamos la optimización inteligente
+    if is_empty and model_key in grids:
+        grid_search = GridSearchCV(
+            estimator=pipeline,
+            param_grid=grids[model_key],
+            scoring=config.MAIN_METRIC,
+            cv=3,  # 3-Fold para agilizar la entrega del máster
+            n_jobs=-1
+        )
+        grid_search.fit(X_train, y_train)
+        
+        # EXTRAER LOS PARÁMETROS GANADORES
+        best_params = grid_search.best_params_
+
+        # 🚨 IMPRESIÓN POR CONSOLA: Se copia en el config.py
+        print("\n" + "="*60)
+        print(f"¡COMBINACIÓN GANADORA ENCONTRADA PARA: {model_key.upper()}!")
+        print("Copia estos valores en tu config.py para fijarlos:")
+        for param_name, param_value in best_params.items():
+            # Limpiamos el prefijo 'model__' que exige Scikit-Learn en los Pipelines
+            clean_name = param_name.replace("model__", f"{model_key.upper()}_")
+            print(f"{clean_name} = {param_value}")
+        print("="*60 + "\n")
+    
+        return grid_search.best_estimator_
+
+    # SI YA TENEMOS VALORES: Entrena directo en un par de segundos
+    print(f"Parámetros fijos detectados para '{model_key}'. Entrenando modelo directo...")
     pipeline.fit(X_train, y_train)
     return pipeline
 
