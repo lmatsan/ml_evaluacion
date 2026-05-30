@@ -4,25 +4,21 @@ import pandas as pd
 import tensorflow as tf
 
 from src import config
-from src.data_loader import load_features_and_target
 from src.model_trainer import apply_preprocessing_rules
 from src.model_trainer import clean_dataset
-from src.model_trainer import fit_preprocessing_rules
-
-BEST_MODEL_PIPELINE_PATH = config.OUTPUTS_DIR / "best_model_pipeline.joblib"
-BEST_NEURAL_NETWORK_MODEL_PATH = config.OUTPUTS_DIR / "best_model.keras"
-BEST_NEURAL_PREPROCESSOR_PATH = (
-    config.OUTPUTS_DIR / "best_model_preprocessor.joblib"
-)
 
 def payload_to_dataframe(payload: dict) -> pd.DataFrame:
     return pd.DataFrame([payload])
 
 
 def load_best_model_artifact() -> dict:
-    has_classical_model = BEST_MODEL_PIPELINE_PATH.exists()
-    has_neural_model = BEST_NEURAL_NETWORK_MODEL_PATH.exists()
-    has_neural_preprocessor = BEST_NEURAL_PREPROCESSOR_PATH.exists()
+    has_classical_model = config.BEST_MODEL_PIPELINE_PATH.exists()
+    has_neural_model = config.BEST_NEURAL_NETWORK_MODEL_PATH.exists()
+    has_neural_preprocessor = config.BEST_NEURAL_PREPROCESSOR_PATH.exists()
+    has_preprocessing_rules = config.BEST_PREPROCESSING_RULES_PATH.exists()
+
+    if not has_preprocessing_rules:
+        raise FileNotFoundError("no preprocessing rules found")
 
     if has_classical_model and (has_neural_model or has_neural_preprocessor):
         raise ValueError(
@@ -37,16 +33,22 @@ def load_best_model_artifact() -> dict:
     if has_classical_model:
         return {
             "model_type": "classical",
-            "model_object": joblib.load(BEST_MODEL_PIPELINE_PATH),
+            "model_object": joblib.load(config.BEST_MODEL_PIPELINE_PATH),
+            "preprocessing_rules": joblib.load(
+                config.BEST_PREPROCESSING_RULES_PATH
+            ),
         }
 
     if has_neural_model and has_neural_preprocessor:
         return {
             "model_type": "neural_network",
             "model_object": tf.keras.models.load_model(
-                BEST_NEURAL_NETWORK_MODEL_PATH
+                config.BEST_NEURAL_NETWORK_MODEL_PATH
             ),
-            "preprocessor": joblib.load(BEST_NEURAL_PREPROCESSOR_PATH),
+            "preprocessor": joblib.load(config.BEST_NEURAL_PREPROCESSOR_PATH),
+            "preprocessing_rules": joblib.load(
+                config.BEST_PREPROCESSING_RULES_PATH
+            ),
         }
 
     raise FileNotFoundError(
@@ -55,55 +57,59 @@ def load_best_model_artifact() -> dict:
     )
 
 
-def prepare_features(features: pd.DataFrame) -> pd.DataFrame:
-    payload_features = features.copy()
-    features, target = load_features_and_target()
-    cleaned_features, cleaned_target = clean_dataset(features, target)
-    preprocessing_rules = fit_preprocessing_rules(cleaned_features)
-    payload_target = pd.Series(
+def prepare_features(
+    X: pd.DataFrame,
+    preprocessing_rules: dict,
+) -> pd.DataFrame:
+    y = pd.Series(
         [0],
-        index=payload_features.index,
-        name=cleaned_target.name,
+        index=X.index,
+        name=config.TARGET_COLUMN,
     )
-    cleaned_payload_features, cleaned_payload_target = clean_dataset(
-        payload_features,
-        payload_target,
+    X, y = clean_dataset(
+        X,
+        y,
     )
-    processed_features, _ = apply_preprocessing_rules(
-        cleaned_payload_features,
-        cleaned_payload_target,
+    X, _ = apply_preprocessing_rules(
+        X,
+        y,
         preprocessing_rules,
     )
-    return processed_features
+    if X.empty:
+        raise ValueError("payload removed by preprocessing rules")
+    return X
 
 
 def predict_booking_from_payload(
     payload: dict,
 ) -> dict:
-    payload_features = payload_to_dataframe(payload)
+    X = payload_to_dataframe(payload)
     best_model_artifact = load_best_model_artifact()
-    processed_features = prepare_features(payload_features)
+    X = prepare_features(
+        X,
+        best_model_artifact["preprocessing_rules"],
+    )
 
     if best_model_artifact["model_type"] == "classical":
-        probability = best_model_artifact["model_object"].predict_proba(
-            processed_features
+        y_proba = best_model_artifact["model_object"].predict_proba(
+            X
         )[:, 1]
     else:
-        transformed_features = best_model_artifact["preprocessor"].transform(
-            processed_features
+        X_transformed = best_model_artifact["preprocessor"].transform(
+            X
         )
-        probability = best_model_artifact["model_object"].predict(
-            transformed_features,
+        y_proba = best_model_artifact["model_object"].predict(
+            X_transformed,
             verbose=0,
         ).reshape(-1)
 
-    probability = float(np.asarray(probability)[0])
-    predicted_label = int(probability >= 0.5)
+    predicted_probability = float(np.asarray(y_proba)[0])
+    predicted_label = int(predicted_probability >= 0.5)
     predicted_class_name = config.CLASS_LABELS[predicted_label]
 
     return {
         "predicted_label": predicted_label,
         "predicted_class_name": predicted_class_name,
-        "predicted_probability": probability,
+        "predicted_probability": predicted_probability,
         "model_type": best_model_artifact["model_type"],
     }

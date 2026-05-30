@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.metrics import accuracy_score
@@ -12,67 +14,64 @@ from sklearn.metrics import roc_curve
 
 from src import config
 
-COMPARATIVE_ROC_CURVE_PATH = config.OUTPUTS_DIR / "comparative_roc_curve.png"
-
-
-def _extract_probabilities(model_object, validation_features, model_type: str):
+def _extract_probabilities(model_object, X, model_type: str):
     if model_type == "classical":
-        return model_object.predict_proba(validation_features)[:, 1]
+        return model_object.predict_proba(X)[:, 1]
 
     if model_type == "neural_network":
         transformed_features = model_object["preprocessor"].transform(
-            validation_features
+            X
         )
-        predictions = model_object["model"].predict(
+        y_proba = model_object["model"].predict(
             transformed_features,
             verbose=0,
         )
-        return predictions.reshape(-1)
+        return y_proba.reshape(-1)
 
     raise ValueError(f"Unsupported model: {model_type}")
 
 
-def _build_predictions(probabilities):
-    return (probabilities >= 0.5).astype(int)
+def _build_predictions(y_proba):
+    return (y_proba >= 0.5).astype(int)
 
 
 def evaluate_classification_model(
     model_name,
     model_object,
-    validation_features,
-    validation_target,
+    X,
+    y_true,
     model_type,
 ) -> dict:
-    probabilities = _extract_probabilities(
+    y_proba = _extract_probabilities(
         model_object,
-        validation_features,
+        X,
         model_type,
     )
-    predicted_labels = _build_predictions(probabilities)
-    confusion_matrix_values = confusion_matrix(validation_target, predicted_labels)
+    y_pred = _build_predictions(y_proba)
+    confusion_matrix_values = confusion_matrix(y_true, y_pred)
     false_positive_rate, true_positive_rate, thresholds = roc_curve(
-        validation_target,
-        probabilities,
+        y_true,
+        y_proba,
     )
-    roc_auc = roc_auc_score(validation_target, probabilities)
+    roc_auc = roc_auc_score(y_true, y_proba)
 
     return {
         "model_name": model_name,
         "model_type": model_type,
-        "accuracy": accuracy_score(validation_target, predicted_labels),
+        "accuracy": accuracy_score(y_true, y_pred),
         "precision": precision_score(
-            validation_target,
-            predicted_labels,
+            y_true,
+            y_pred,
             zero_division=0,
         ),
         "recall": recall_score(
-            validation_target,
-            predicted_labels,
+            y_true,
+            y_pred,
             zero_division=0,
         ),
         "f1": f1_score(
-            validation_target,
-            predicted_labels,
+            y_true,
+            y_pred,
             zero_division=0,
         ),
         "roc_auc": roc_auc,
@@ -248,7 +247,7 @@ def export_training_report(
         "",
         f"- Main metric: `{config.MAIN_METRIC}`",
         f"- Best model: `{best_result['model_name']}`",
-        f"- Comparative ROC curve: `{COMPARATIVE_ROC_CURVE_PATH}`",
+        f"- Comparative ROC curve: `{config.COMPARATIVE_ROC_CURVE_PATH}`",
         "- Best model confusion matrix: "
         f"`{best_confusion_matrix_path}`",
         "- Random Forest feature importances: "

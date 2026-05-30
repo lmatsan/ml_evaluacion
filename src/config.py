@@ -3,6 +3,18 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUTS_DIR = BASE_DIR / "outputs"
 DATASET_PATH = BASE_DIR / "data" / "raw" / "dataset_practica_final.csv"
+COMPARATIVE_ROC_CURVE_PATH = OUTPUTS_DIR / "comparative_roc_curve.png"
+BEST_MODEL_CONFUSION_MATRIX_PATH = OUTPUTS_DIR / "best_model_confusion_matrix.png"
+RANDOM_FOREST_IMPORTANCE_PLOT_PATH = (
+    OUTPUTS_DIR / "random_forest_feature_importances.png"
+)
+BEST_MODEL_PIPELINE_PATH = OUTPUTS_DIR / "best_model_pipeline.joblib"
+BEST_NEURAL_NETWORK_MODEL_PATH = OUTPUTS_DIR / "best_model.keras"
+BEST_NEURAL_PREPROCESSOR_PATH = OUTPUTS_DIR / "best_model_preprocessor.joblib"
+BEST_PREPROCESSING_RULES_PATH = (
+    OUTPUTS_DIR / "best_model_preprocessing_rules.joblib"
+)
+TRAINING_REPORT_PATH = OUTPUTS_DIR / "training_report.md"
 TARGET_COLUMN = "is_canceled"
 MAIN_METRIC = "roc_auc"
 CLASS_LABELS = ["Not canceled", "Canceled"]

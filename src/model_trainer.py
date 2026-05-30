@@ -23,19 +23,6 @@ from src.evaluator import export_confusion_matrix_figure
 from src.evaluator import export_random_forest_feature_importance
 from src.evaluator import export_training_report
 
-COMPARATIVE_ROC_CURVE_PATH = config.OUTPUTS_DIR / "comparative_roc_curve.png"
-BEST_MODEL_CONFUSION_MATRIX_PATH = (
-    config.OUTPUTS_DIR / "best_model_confusion_matrix.png"
-)
-RANDOM_FOREST_IMPORTANCE_PLOT_PATH = (
-    config.OUTPUTS_DIR / "random_forest_feature_importances.png"
-)
-BEST_MODEL_PIPELINE_PATH = config.OUTPUTS_DIR / "best_model_pipeline.joblib"
-BEST_NEURAL_NETWORK_MODEL_PATH = config.OUTPUTS_DIR / "best_model.keras"
-BEST_NEURAL_PREPROCESSOR_PATH = (
-    config.OUTPUTS_DIR / "best_model_preprocessor.joblib"
-)
-TRAINING_REPORT_PATH = config.OUTPUTS_DIR / "training_report.md"
 MONTH_COLUMN = "arrival_date_month"
 COUNTRY_COLUMN = "country"
 ADR_COLUMN = "adr"
@@ -93,8 +80,13 @@ def _ensure_output_directories() -> None:
     config.OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _remove_file_if_exists(file_path) -> None:
+    if file_path.exists():
+        file_path.unlink()
+
+
 def clean_dataset(
-    features: pd.DataFrame, target: pd.Series
+    X: pd.DataFrame, y: pd.Series
 ) -> tuple[pd.DataFrame, pd.Series]:
     required_columns = [
         MONTH_COLUMN,
@@ -106,10 +98,10 @@ def clean_dataset(
         *config.LEAKAGE_COLUMNS,
         *config.REDUNDANT_COLUMNS,
     ]
-    _ensure_columns_exist(features, required_columns)
+    _ensure_columns_exist(X, required_columns)
 
-    combined_dataframe = features.copy()
-    combined_dataframe[target.name] = target.copy()
+    combined_dataframe = X.copy()
+    combined_dataframe[y.name] = y.copy()
     combined_dataframe = combined_dataframe.drop_duplicates().copy()
     combined_dataframe = combined_dataframe[
         combined_dataframe[MARKET_SEGMENT_COLUMN]
@@ -141,41 +133,41 @@ def clean_dataset(
         errors="ignore",
     )
 
-    cleaned_target = combined_dataframe.pop(target.name)
-    cleaned_features = combined_dataframe
-    return cleaned_features, cleaned_target
+    y = combined_dataframe.pop(y.name)
+    X = combined_dataframe
+    return X, y
 
 
 def split_train_validation(
-    features: pd.DataFrame, target: pd.Series
+    X: pd.DataFrame, y: pd.Series
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     return train_test_split(
-        features,
-        target,
+        X,
+        y,
         test_size=config.VALIDATION_SIZE,
         random_state=config.RANDOM_STATE,
-        stratify=target,
+        stratify=y,
     )
 
 
-def fit_preprocessing_rules(training_features: pd.DataFrame) -> dict:
+def fit_preprocessing_rules(X_train: pd.DataFrame) -> dict:
     _ensure_columns_exist(
-        training_features,
+        X_train,
         [COUNTRY_COLUMN, ADR_COLUMN],
     )
 
-    country_mode = training_features[COUNTRY_COLUMN].mode(dropna=True)
+    country_mode = X_train[COUNTRY_COLUMN].mode(dropna=True)
     if country_mode.empty:
         raise ValueError(
             f"Column '{COUNTRY_COLUMN}' does not contain valid values."
         )
 
     country_fill_value = country_mode.iloc[0]
-    country_series = training_features[COUNTRY_COLUMN].fillna(country_fill_value)
+    country_series = X_train[COUNTRY_COLUMN].fillna(country_fill_value)
     top_countries = (
         country_series.value_counts().head(config.COUNTRY_TOP_N).index.tolist()
     )
-    adr_upper_bound = training_features[ADR_COLUMN].quantile(config.ADR_UPPER_QUANTILE)
+    adr_upper_bound = X_train[ADR_COLUMN].quantile(config.ADR_UPPER_QUANTILE)
 
     return {
         "country_fill_value": country_fill_value,
@@ -185,12 +177,12 @@ def fit_preprocessing_rules(training_features: pd.DataFrame) -> dict:
 
 
 def apply_preprocessing_rules(
-    features: pd.DataFrame,
-    target: pd.Series,
+    X: pd.DataFrame,
+    y: pd.Series,
     preprocessing_rules: dict,
 ) -> tuple[pd.DataFrame, pd.Series]:
     _ensure_columns_exist(
-        features,
+        X,
         [
             COUNTRY_COLUMN,
             ADR_COLUMN,
@@ -199,37 +191,37 @@ def apply_preprocessing_rules(
         ],
     )
 
-    processed_features = features.copy()
-    processed_target = target.copy()
-    processed_features[COUNTRY_COLUMN] = processed_features[
+    X = X.copy()
+    y = y.copy()
+    X[COUNTRY_COLUMN] = X[
         COUNTRY_COLUMN
     ].fillna(preprocessing_rules["country_fill_value"])
-    processed_features = processed_features[
-        processed_features[ADR_COLUMN]
+    X = X[
+        X[ADR_COLUMN]
         <= preprocessing_rules["adr_upper_bound"]
     ].copy()
-    processed_target = processed_target.loc[processed_features.index].copy()
-    processed_features[COUNTRY_COLUMN] = processed_features[
+    y = y.loc[X.index].copy()
+    X[COUNTRY_COLUMN] = X[
         COUNTRY_COLUMN
     ].where(
-        processed_features[COUNTRY_COLUMN].isin(preprocessing_rules["top_countries"]),
+        X[COUNTRY_COLUMN].isin(preprocessing_rules["top_countries"]),
         config.COUNTRY_OTHER_LABEL,
     )
-    processed_features[HAS_AGENT_COLUMN] = (
-        processed_features[AGENT_COLUMN] != config.AGENT_MISSING_VALUE
+    X[HAS_AGENT_COLUMN] = (
+        X[AGENT_COLUMN] != config.AGENT_MISSING_VALUE
     ).astype(int)
-    processed_features[HAS_COMPANY_COLUMN] = (
-        processed_features[COMPANY_COLUMN] != config.COMPANY_MISSING_VALUE
+    X[HAS_COMPANY_COLUMN] = (
+        X[COMPANY_COLUMN] != config.COMPANY_MISSING_VALUE
     ).astype(int)
-    processed_features = processed_features.drop(
+    X = X.drop(
         columns=[AGENT_COLUMN, COMPANY_COLUMN],
         errors="ignore",
     )
-    processed_features[config.CATEGORICAL_FEATURES] = processed_features[
+    X[config.CATEGORICAL_FEATURES] = X[
         config.CATEGORICAL_FEATURES
     ].astype(str)
-    processed_features = processed_features[config.FINAL_FEATURE_COLUMNS].copy()
-    return processed_features, processed_target
+    X = X[config.FINAL_FEATURE_COLUMNS].copy()
+    return X, y
 
 
 def prepare_training_datasets() -> tuple[
@@ -237,35 +229,37 @@ def prepare_training_datasets() -> tuple[
     pd.DataFrame,
     pd.Series,
     pd.Series,
+    dict,
 ]:
-    features, target = load_features_and_target()
-    cleaned_features, cleaned_target = clean_dataset(features, target)
+    X, y = load_features_and_target()
+    X, y = clean_dataset(X, y)
     (
-        train_features,
-        validation_features,
-        train_target,
-        validation_target,
-    ) = split_train_validation(cleaned_features, cleaned_target)
-    preprocessing_rules = fit_preprocessing_rules(train_features)
-    processed_train_features, processed_train_target = (
+        X_train,
+        X_validation,
+        y_train,
+        y_validation,
+    ) = split_train_validation(X, y)
+    preprocessing_rules = fit_preprocessing_rules(X_train)
+    X_train, y_train = (
         apply_preprocessing_rules(
-            train_features,
-            train_target,
+            X_train,
+            y_train,
             preprocessing_rules,
         )
     )
-    processed_validation_features, processed_validation_target = (
+    X_validation, y_validation = (
         apply_preprocessing_rules(
-            validation_features,
-            validation_target,
+            X_validation,
+            y_validation,
             preprocessing_rules,
         )
     )
     return (
-        processed_train_features,
-        processed_validation_features,
-        processed_train_target,
-        processed_validation_target,
+        X_train,
+        X_validation,
+        y_train,
+        y_validation,
+        preprocessing_rules,
     )
 
 
@@ -344,8 +338,8 @@ def build_neural_network(input_dim: int) -> tf.keras.Model:
 def train_classical_model(
     model_key: str,
     model,
-    train_features,
-    train_target,
+    X_train,
+    y_train,
 ) -> Pipeline:
     pipeline = Pipeline(
         steps=[
@@ -353,30 +347,28 @@ def train_classical_model(
             ("model", model),
         ]
     )
-    pipeline.fit(train_features, train_target)
+    pipeline.fit(X_train, y_train)
     return pipeline
 
 
 def train_neural_network_model(
-    train_features,
-    train_target,
-    validation_features,
-    validation_target,
+    X_train,
+    y_train,
+    X_validation,
+    y_validation,
 ) -> dict:
     preprocessor = build_preprocessor("neural_network")
-    transformed_train_features = preprocessor.fit_transform(train_features)
-    transformed_validation_features = preprocessor.transform(validation_features)
-    transformed_train_features = np.asarray(
-        transformed_train_features,
+    X_train_transformed = preprocessor.fit_transform(X_train)
+    X_validation_transformed = preprocessor.transform(X_validation)
+    X_train_transformed = np.asarray(
+        X_train_transformed,
         dtype=np.float32,
     )
-    transformed_validation_features = np.asarray(
-        transformed_validation_features,
+    X_validation_transformed = np.asarray(
+        X_validation_transformed,
         dtype=np.float32,
     )
-    neural_network = build_neural_network(
-        transformed_train_features.shape[1]
-    )
+    neural_network = build_neural_network(X_train_transformed.shape[1])
     early_stopping = EarlyStopping(
         monitor="val_auc",
         mode="max",
@@ -384,11 +376,11 @@ def train_neural_network_model(
         restore_best_weights=True,
     )
     neural_network.fit(
-        transformed_train_features,
-        train_target.to_numpy(),
+        X_train_transformed,
+        y_train.to_numpy(),
         validation_data=(
-            transformed_validation_features,
-            validation_target.to_numpy(),
+            X_validation_transformed,
+            y_validation.to_numpy(),
         ),
         epochs=config.NEURAL_NETWORK_EPOCHS,
         batch_size=config.NEURAL_NETWORK_BATCH_SIZE,
@@ -403,71 +395,90 @@ def train_neural_network_model(
 
 def train_all_models() -> dict:
     (
-        train_features,
-        validation_features,
-        train_target,
-        validation_target,
+        X_train,
+        X_validation,
+        y_train,
+        y_validation,
+        preprocessing_rules,
     ) = prepare_training_datasets()
-    results = {}
+    model_results = {}
 
     classical_models = build_classical_models()
     for model_key, model in classical_models.items():
-        trained_model = train_classical_model(
+        best_model = train_classical_model(
             model_key,
             model,
-            train_features,
-            train_target,
+            X_train,
+            y_train,
         )
-        evaluation = evaluate_classification_model(
+        evaluation_result = evaluate_classification_model(
             get_model_display_name(model_key),
-            trained_model,
-            validation_features,
-            validation_target,
+            best_model,
+            X_validation,
+            y_validation,
             "classical",
         )
-        results[model_key] = {
-            **evaluation,
-            "model_object": trained_model,
+        model_results[model_key] = {
+            **evaluation_result,
+            "model_object": best_model,
         }
 
-    trained_neural_network = train_neural_network_model(
-        train_features,
-        train_target,
-        validation_features,
-        validation_target,
+    best_model = train_neural_network_model(
+        X_train,
+        y_train,
+        X_validation,
+        y_validation,
     )
-    neural_network_evaluation = evaluate_classification_model(
+    evaluation_result = evaluate_classification_model(
         get_model_display_name("neural_network"),
-        trained_neural_network,
-        validation_features,
-        validation_target,
+        best_model,
+        X_validation,
+        y_validation,
         "neural_network",
     )
-    results["neural_network"] = {
-        **neural_network_evaluation,
-        "model_object": trained_neural_network,
+    model_results["neural_network"] = {
+        **evaluation_result,
+        "model_object": best_model,
     }
-    return results
+    return {
+        "model_results": model_results,
+        "preprocessing_rules": preprocessing_rules,
+    }
 
 
-def select_best_model(results: dict) -> dict:
+def select_best_model(model_results: dict) -> dict:
     return max(
-        results.values(),
+        model_results.values(),
         key=lambda result: result[config.MAIN_METRIC],
     )
 
 
-def save_best_artifact(best_result: dict) -> None:
+def save_best_artifact(
+    best_result: dict,
+    preprocessing_rules: dict,
+) -> None:
     _ensure_output_directories()
+    joblib.dump(
+        preprocessing_rules,
+        config.BEST_PREPROCESSING_RULES_PATH,
+    )
 
     if best_result["model_type"] == "classical":
-        joblib.dump(best_result["model_object"], BEST_MODEL_PIPELINE_PATH)
+        joblib.dump(
+            best_result["model_object"],
+            config.BEST_MODEL_PIPELINE_PATH,
+        )
+        _remove_file_if_exists(config.BEST_NEURAL_NETWORK_MODEL_PATH)
+        _remove_file_if_exists(config.BEST_NEURAL_PREPROCESSOR_PATH)
     elif best_result["model_type"] == "neural_network":
-        best_result["model_object"]["model"].save(BEST_NEURAL_NETWORK_MODEL_PATH)
+        best_result["model_object"]["model"].save(
+            config.BEST_NEURAL_NETWORK_MODEL_PATH
+        )
         joblib.dump(
             best_result["model_object"]["preprocessor"],
-            BEST_NEURAL_PREPROCESSOR_PATH,
+            config.BEST_NEURAL_PREPROCESSOR_PATH,
         )
+        _remove_file_if_exists(config.BEST_MODEL_PIPELINE_PATH)
     else:
         raise ValueError(
             f"Unsupported model type: {best_result['model_type']}"
@@ -476,38 +487,40 @@ def save_best_artifact(best_result: dict) -> None:
 
 def run_training_pipeline() -> dict:
     _ensure_output_directories()
-    results = train_all_models()
-    result_list = list(results.values())
-    comparison_dataframe = build_model_comparison(result_list)
+    training_output = train_all_models()
+    model_results = training_output["model_results"]
+    preprocessing_rules = training_output["preprocessing_rules"]
+    model_result_list = list(model_results.values())
+    comparison_dataframe = build_model_comparison(model_result_list)
     comparative_roc_curve_path = export_comparative_roc_curve(
-        result_list,
-        COMPARATIVE_ROC_CURVE_PATH,
+        model_result_list,
+        config.COMPARATIVE_ROC_CURVE_PATH,
     )
-    best_result = select_best_model(results)
+    best_result = select_best_model(model_results)
     best_confusion_matrix_path = export_confusion_matrix_figure(
         best_result["model_name"],
         np.array(best_result["confusion_matrix"]),
-        BEST_MODEL_CONFUSION_MATRIX_PATH,
+        config.BEST_MODEL_CONFUSION_MATRIX_PATH,
     )
-    random_forest_result = results["random_forest"]
+    random_forest_result = model_results["random_forest"]
     random_forest_feature_importance_path = (
         export_random_forest_feature_importance(
             random_forest_result["model_object"],
-            RANDOM_FOREST_IMPORTANCE_PLOT_PATH,
+            config.RANDOM_FOREST_IMPORTANCE_PLOT_PATH,
         )
     )
     export_training_report(
         comparison_dataframe,
-        TRAINING_REPORT_PATH,
+        config.TRAINING_REPORT_PATH,
         best_result,
         best_confusion_matrix_path,
         random_forest_feature_importance_path,
     )
-    save_best_artifact(best_result)
+    save_best_artifact(best_result, preprocessing_rules)
     return {
         "comparison_dataframe": comparison_dataframe,
         "best_result": best_result,
-        "report_path": TRAINING_REPORT_PATH,
+        "report_path": config.TRAINING_REPORT_PATH,
         "comparative_roc_curve_path": comparative_roc_curve_path,
         "best_confusion_matrix_path": best_confusion_matrix_path,
         "random_forest_feature_importance_path": (
@@ -526,4 +539,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
