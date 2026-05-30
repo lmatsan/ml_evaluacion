@@ -1,7 +1,8 @@
 # ==========================================
-# 1. ENTORNOS VIRTUALES (Python)
+# 1. ENTORNOS VIRTUALES
 # ==========================================
 venv/
+.venv/
 env/
 ENV/
 bin/
@@ -9,7 +10,7 @@ lib/
 include/
 
 # ==========================================
-# 2. JUPYTER NOTEBOOKS (Archivos temporales)
+# 2. JUPYTER NOTEBOOKS
 # ==========================================
 .ipynb_checkpoints/
 #*.ipynb
@@ -18,34 +19,21 @@ include/
 .virtual_documents/
 
 # ==========================================
-# 3. ARCHIVOS DE DATOS (¡Crucial para ML!)
+# 3. ARCHIVOS DE DATOS
 # ==========================================
-# Ignora todos los CSV, Excel o archivos de datos para no saturar GitHub
 # *.csv
 # *.xlsx
 # *.xls
 # *.json
 # Si usas bases de datos locales o formatos comprimidos de datos
 *.pkl
-*.pickle
-*.parquet
-*.feather
-*.db
-*.sqlite3
 
-# EXCEPCIÓN: Si quieres que una carpeta de datos vacía se suba, o un CSV mini de test
-# !data/mi_archivo_permitido.csv
 
 # ==========================================
 # 4. MODELOS ENTREANADOS (Pesados)
 # ==========================================
-# Ignora los archivos donde guardas tus modelos entrenados (RandomForest, XGBoost, etc.)
-*.joblib
 *.pkl
-*.h5
-*.pth
-*.onnx
-models/
+
 
 # ==========================================
 # 5. CONFIGURACIÓN DE EDITORES (VS Code / PyCharm)
@@ -67,3 +55,21 @@ ehthumbs.db
 Icon?
 Thumbs.db
 *.log
+
+# ==========================================
+# 7. CACHES DE PYTHON
+# ==========================================
+__pycache__/
+*.pyc
+
+# ==========================================
+# 8. RESULTADOS DE PRUEBAS Y REPORTES
+# ==========================================
+outputs/
+catboost_info/
+
+# ==========================================
+# 9. MLFLOW
+# ==========================================
+mlruns/
+mlartifacts/

@@ -34,7 +34,10 @@
 - `company` → `'no company'` (cliente directo)
 - `country` → moda (`PRT`, bajo % de nulos)
 
-**Duplicados:** eliminados directamente (error de registro).
+**Duplicados (27% del dataset):**
+
+- **El problema:** Borrar 31,994 filas idénticas nos parece un error de negocio (son reservas legítimas de grupos/familias), pero mantenerlas causaba _Data Leakage_ (sobreajuste del modelo).
+- **Solución:** Se colapsaron los duplicados en registros únicos para proteger la matemática del modelo, pero se creó la variable `room_count` para conservar el impacto del volumen de reserva sin perder información.
 
 **Outliers en `adr`:** valores negativos eliminados + > percentil 99 eliminados.
 
@@ -85,7 +88,7 @@
 - `City Hotel` cancela más que `Resort Hotel` (30% vs 22%)
 - `Online TA` cancela más (35%); `Corporate` menos (12%)
 - `Transient` cancela más (30%); `Group` menos (9%)
-- `Undefined` en `market_segment` eliminada (100% +, error de registro)
+- `Undefined` en `market_segment` eliminada (2 filas, error de registro)
 
 ---
 
