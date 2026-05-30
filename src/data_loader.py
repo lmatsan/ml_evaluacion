@@ -8,8 +8,9 @@ from src.config import (
     MARKET_SEGMENT_UNDEFINED,
     RAW_DATA_PATH,
     TARGET_COL,
-    RAW_DATASET_COLUMNS
-)
+    RAW_DATASET_COLUMNS,
+    COUNTRY_COLUMN,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ def load_clean_data(
 
     # Transformaciones secuenciales
     df = _drop_leakage_columns(df)
+    df = _impute_country_mode(df)
     df = _impute_children(df)
     df = _binarize_agent_company(df)
     df = _remove_invalid_rows(df)
@@ -117,6 +119,17 @@ def _drop_leakage_columns(df: pd.DataFrame) -> pd.DataFrame:
     if dropped:
         logger.warning(f"Columnas a eliminar no encontradas (ya ausentes): {dropped}")
     return df.drop(columns=cols_present)
+
+def _impute_country_mode(df: pd.DataFrame) -> pd.DataFrame:
+    """Imputa los valores nulos de la columna 'country' usando su moda."""
+    df = df.copy()
+    
+    # Calculamos la moda y rellenamos en una única operación segura
+    country_mode = df[COUNTRY_COLUMN].mode()[0]
+    df[COUNTRY_COLUMN] = df[COUNTRY_COLUMN].fillna(country_mode)
+    
+    logger.info(f"Imputación en '{COUNTRY_COLUMN}' completada usando la moda: '{country_mode}'.")
+    return df
 
 def _impute_children(df: pd.DataFrame) -> pd.DataFrame:
     """Asume ausencia (0) en los registros nulos de la columna 'children'."""

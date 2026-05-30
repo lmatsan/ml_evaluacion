@@ -8,8 +8,8 @@ from src.data_loader import split_features_and_target
 
 from src.config import (
     ADR_PERCENTILE,
-    CATEGORICAL_FEATURES,
-    NUMERIC_FEATURES,
+    CATEGORICAL_COLS,
+    NUMERIC_COLS,
     COUNTRY_OTHER_LABEL,
     TARGET_COL,
     COUNTRY_TOP_N,
@@ -65,8 +65,8 @@ def build_preprocessor(model_key: str) -> ColumnTransformer:
 
     return ColumnTransformer(
         transformers=[
-            ("numerical", numerical_transformer, NUMERIC_FEATURES),
-            ("categorical", categorical_transformer, CATEGORICAL_FEATURES),
+            ("numerical", numerical_transformer, NUMERIC_COLS),
+            ("categorical", categorical_transformer, CATEGORICAL_COLS),
         ]
     )
 
