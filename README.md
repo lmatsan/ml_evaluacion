@@ -96,6 +96,33 @@ pip install -r requirements.txt
 python -m src.model_trainer
 ```
 
+## Flujo de entrenamiento
+
+Este es el flujo simplificado que sigue el proyecto cuando se ejecuta `python -m src.model_trainer`:
+
+1. Se carga el CSV completo con los datos originales.
+   Funciones principales: `prepare_training_datasets()` llama a `load_dataset()` y `validate_dataset_structure()`.
+2. Se hace una limpieza base del dataset.
+   Función principal: `clean_dataset()`. Aquí se eliminan duplicados, se quitan columnas con leakage y se filtran registros no válidos.
+3. Se aplican transformaciones fijas.
+   Función principal: `apply_fixed_preprocessing()`. Aquí se convierten tipos con diccionarios, se rellenan nulos y se transforma `arrival_date_month`.
+4. Se divide el dataset en entrenamiento y validación.
+   Función principal: `split_train_validation()`. Aquí se ejecuta `train_test_split` con `stratify`.
+5. Se aprenden reglas solo con el conjunto de entrenamiento.
+   Función principal: `fit_preprocessing_rules()`. Aquí se calculan, por ejemplo, el país más frecuente, los países principales y el umbral superior de `adr`.
+6. Esas reglas se aplican tanto a entrenamiento como a validación.
+   Función principal: `apply_preprocessing_rules()`.
+7. Se separan las variables de entrada (`X`) y la variable objetivo (`y`).
+   Función principal: `split_features_and_target()`.
+8. Se entrenan todos los modelos definidos en el proyecto.
+   Funciones principales: `train_all_models()`, `train_classical_model()` y `train_neural_network_model()`.
+9. Cada modelo se evalúa con el conjunto de validación.
+   Función principal: `evaluate_classification_model()`. Aquí se calculan accuracy, precision, recall, f1 y roc_auc, además de la matriz de confusión y la curva ROC.
+10. Se comparan los resultados y se elige el mejor modelo.
+    Funciones principales: `build_model_comparison()` y `select_best_model()`.
+11. Se guardan el informe, los gráficos y los artefactos finales en `outputs/`.
+    Funciones principales: `export_training_report()`, `export_comparative_roc_curve()`, `export_confusion_matrix_figure()`, `export_random_forest_feature_importance()` y `save_best_artifact()`.
+
 ## API
 
 Para levantar la API en local:
