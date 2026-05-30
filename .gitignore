@@ -2,6 +2,7 @@
 # 1. ENTORNOS VIRTUALES
 # ==========================================
 venv/
+.venv/
 env/
 ENV/
 bin/
@@ -56,18 +57,13 @@ Thumbs.db
 *.log
 
 # ==========================================
-# 8. PYTHON
+# 7. CACHES DE PYTHON
 # ==========================================
-# Archivos de caché que Python crea al ejecutar scripts
 __pycache__/
 *.pyc
 
-# Carpetas ocultas que crean las herramientas de tests y calidad (si las usas)
-.pytest_cache/
-.mypy_cache/
-
 # ==========================================
-# 9. RESULTADOS DE PRUEBAS Y REPORTES
+# 8. RESULTADOS DE PRUEBAS Y REPORTES
 # ==========================================
 outputs/
 catboost_info/
