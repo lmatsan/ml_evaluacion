@@ -107,7 +107,6 @@ def build_classical_models() -> dict:
             eval_metric="AUC",
             verbose=0,
             random_seed=config.RANDOM_STATE,
-            auto_class_weights=config.CATBOOST_CLASS_WEIGHT,
         ),
     }
 
