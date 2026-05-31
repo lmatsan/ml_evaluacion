@@ -160,45 +160,59 @@ RANDOM_FOREST_IMPORTANCE_TOP_N = 20  # Controla el número de barras en el plot
 # =====================================================================
 
 # 1. Regresión Logística
-LOGISTIC_C = 10.0  # <-- Lo ponemos en None para la primera vuelta.
-LOGISTIC_MAX_ITER = 500
-LOGISTIC_SOLVER = "liblinear"
+LOGISTIC_C = None  # <-- Lo ponemos en None para la primera vuelta.
+LOGISTIC_MAX_ITER = None
+LOGISTIC_SOLVER = "lbfgs"
+LOGISTIC_CLASS_WEIGHT = "balanced"
 
 LOGISTIC_PARAM_GRID = {
-    "model__C": [0.01, 0.1, 1.0, 10.0]
+    "model__C": [0.01, 0.1, 1.0, 10.0],
+    "model__max_iter": [100, 200, 500],
+    "model__class_weight": ["balanced"],
+    "model__solver": ["lbfgs", "liblinear", "saga"],
 }
 
 # 2. Árbol de Decisión
-DECISION_TREE_MAX_DEPTH = 12  # <-- Lo ponemos en None para la primera vuelta
-DECISION_TREE_MIN_SAMPLES_SPLIT = 10  # <-- Lo ponemos en None para la primera vuelta
+DECISION_TREE_MAX_DEPTH = None  # <-- Lo ponemos en None para la primera vuelta
+DECISION_TREE_MIN_SAMPLES_SPLIT = None  # <-- Lo ponemos en None para la primera vuelta
+DECISION_TREE_MIN_SAMPLES_LEAF = None  # <-- Lo ponemos en None para la primera vuelta
+DECISION_TREE_CLASS_WEIGHT = "balanced"
 
 DECISION_TREE_PARAM_GRID = {
-    "model__max_depth": [4, 6, 8, 12],
-    "model__min_samples_split": [2, 5, 10]
+    "model__max_depth": [4, 6, 8, 12, 14],
+    "model__min_samples_split": [2, 5, 10, 15, 20],
+    "model__min_samples_leaf": [5, 10, 20],
+    "model__class_weight": ["balanced"]
 }
 
 # 3. Random Forest
-RANDOM_FOREST_N_ESTIMATORS = 200  # <-- Lo ponemos en None para la primera vuelta
+RANDOM_FOREST_N_ESTIMATORS = None  # <-- Lo ponemos en None para la primera vuelta
 RANDOM_FOREST_MAX_DEPTH = None
+RANDOM_FOREST_CLASS_WEIGHT = "balanced"
 
 RANDOM_FOREST_PARAM_GRID = {
-    "model__n_estimators": [100, 200],
-    "model__max_depth": [8, 12, None]
+    "model__n_estimators": [100, 200, 300],
+    "model__max_depth": [8, 12, 16, 20, None],
+    "model__min_samples_leaf": [5, 10],
+    "model__class_weight": ["balanced"]
 }
 # 4. CatBoost
-CATBOOST_ITERATIONS = 300   # Número de árboles a construir (Hiperparámetro)
-CATBOOST_DEPTH = 6          # Profundidad de los árboles (Hiperparámetro)
-CATBOOST_LEARNING_RATE = 0.05
+CATBOOST_ITERATIONS = None   # Número de árboles a construir (Hiperparámetro)
+CATBOOST_DEPTH = None          # Profundidad de los árboles (Hiperparámetro)
+CATBOOST_LEARNING_RATE = None
+CATBOOST_CLASS_WEIGHT = "Balanced"
 
 # Malla de optimización por si decides ponerlo en None más adelante
 CATBOOST_PARAM_GRID = {
-    "model__iterations": [150, 300],
-    "model__depth": [4, 6]
+    "model__iterations": [150, 300, 500],
+    "model__depth": [4, 6, 8],
+    "model__l2_leaf_reg": [1, 3, 5],
+    "model__class_weight": ["balanced"]
 }
 
 # 5. Red Neuronal (Estructura fija de capas)
 NEURAL_NETWORK_HIDDEN_UNITS = [64, 32]  # Capa 1: 64 neuronas, Capa 2: 32 neuronas
-NEURAL_NETWORK_EPOCHS = 30
+NEURAL_NETWORK_EPOCHS = 20
 NEURAL_NETWORK_BATCH_SIZE = 32
 EARLY_STOPPING_PATIENCE = 5
 

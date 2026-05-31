@@ -37,27 +37,31 @@ def get_model_display_name(model_key: str) -> str:
 def _log_model_to_mlflow(model_key: str, trained_model, evaluation_result: dict) -> None:
     """Registra de forma unificada parámetros, métricas y artefactos en MLflow."""
     display_name = get_model_display_name(model_key)
-    
-    with mlflow.start_run(run_name=display_name):
-        
-        # Se loguea hiperparámetros de forma dinámica
-        if model_key == "neural_network":
-            mlflow.log_param("hidden_units", str(config.NEURAL_NETWORK_HIDDEN_UNITS))
-            mlflow.log_param("batch_size", config.NEURAL_NETWORK_BATCH_SIZE)
-            mlflow.log_param("epochs", config.NEURAL_NETWORK_EPOCHS)
-        elif hasattr(trained_model, "named_steps"):  # Es un Pipeline clásico de Sklearn
-            actual_params = trained_model.named_steps["model"].get_params()
-            mlflow.log_params({f"model_{k}": v for k, v in actual_params.items()})
-        
-        # 2. Loguear métricas
-        mlflow.log_metric(config.MAIN_METRIC, evaluation_result[config.MAIN_METRIC])
-        
-        # 3. Guardar el artefacto binario según el tipo
-        if model_key == "neural_network":
-            # Guardamos el modelo de Keras (extraído del diccionario contenedor)
-            mlflow.keras.log_model(trained_model["model"], artifact_path="neural_network")
-        else:
-            mlflow.sklearn.log_model(trained_model, artifact_path=model_key)
+
+    # Se loguea hiperparámetros de forma dinámica
+    if model_key == "neural_network":
+        mlflow.log_param("hidden_units", str(config.NEURAL_NETWORK_HIDDEN_UNITS))
+        mlflow.log_param("batch_size", config.NEURAL_NETWORK_BATCH_SIZE)
+        mlflow.log_param("epochs", config.NEURAL_NETWORK_EPOCHS)
+    elif hasattr(trained_model, "named_steps"):  # Es un Pipeline clásico de Sklearn
+        actual_params = trained_model.named_steps["model"].get_params()
+        mlflow.log_params({f"model_{k}": v for k, v in actual_params.items()})
+    elif model_key == "catboost":
+        actual_params = trained_model.get_params() if hasattr(trained_model, "get_params") else {}
+        mlflow.log_params({f"model_{k}": v for k, v in actual_params.items()})
+
+    # 2. Loguear métricas disponibles en evaluation_result
+    metrics_to_log = ["accuracy", "precision", "recall", "f1", "roc_auc"]
+    for metric_name in metrics_to_log:
+        if metric_name in evaluation_result:
+            mlflow.log_metric(metric_name, evaluation_result[metric_name])
+
+    # 3. Guardar el artefacto binario según el tipo
+    if model_key == "neural_network":
+        # Guardamos el modelo de Keras (extraído del diccionario contenedor)
+        mlflow.keras.log_model(trained_model["model"], artifact_path="neural_network")
+    else:
+        mlflow.sklearn.log_model(trained_model, artifact_path=model_key)
 
 # Crea la carpeta de salida si todavia no existe.
 def _ensure_output_directories() -> None:
@@ -79,16 +83,20 @@ def build_classical_models() -> dict:
             max_iter=config.LOGISTIC_MAX_ITER,
             random_state=config.RANDOM_STATE,
             solver=config.LOGISTIC_SOLVER,
+            class_weight=config.LOGISTIC_CLASS_WEIGHT,
         ),
         "decision_tree": DecisionTreeClassifier(
             max_depth=config.DECISION_TREE_MAX_DEPTH,
             min_samples_split=config.DECISION_TREE_MIN_SAMPLES_SPLIT,
+            min_samples_leaf=config.DECISION_TREE_MIN_SAMPLES_LEAF,
             random_state=config.RANDOM_STATE,
+            class_weight=config.DECISION_TREE_CLASS_WEIGHT,
         ),
         "random_forest": RandomForestClassifier(
             n_estimators=config.RANDOM_FOREST_N_ESTIMATORS,
             max_depth=config.RANDOM_FOREST_MAX_DEPTH,
             random_state=config.RANDOM_STATE,
+            class_weight=config.RANDOM_FOREST_CLASS_WEIGHT,
             n_jobs=-1,
         ),
         "catboost": CatBoostClassifier(
@@ -99,6 +107,7 @@ def build_classical_models() -> dict:
             eval_metric="AUC",
             verbose=0,
             random_seed=config.RANDOM_STATE,
+            auto_class_weights=config.CATBOOST_CLASS_WEIGHT,
         ),
     }
 
@@ -230,7 +239,7 @@ def train_neural_network_model(
 
 
 # Entrena todos los modelos y guarda sus resultados para compararlos.
-def train_all_models() -> dict:
+def train_all_models(parent_run_id: str) -> dict:
     (
         X_train,
         X_validation,
@@ -240,6 +249,11 @@ def train_all_models() -> dict:
     ) = prepare_training_datasets()
     model_results = {}
     mlflow.set_experiment(config.MLFLOW_EXPERIMENT_NAME)
+
+    # Forzamos el cierre de cualquier run colgado del pasado antes de empezar el pipeline limpio
+    # mlflow.end_run()
+
+    # with mlflow.start_run(run_name="Dataset: Baseline Training"):
 
     classical_models = build_classical_models()
     for model_key, model in classical_models.items():
@@ -257,7 +271,9 @@ def train_all_models() -> dict:
             "classical",
         )
         # Tracking centralizado
-        _log_model_to_mlflow(model_key, trained_model, evaluation_result)
+        display_name = get_model_display_name(model_key)
+        with mlflow.start_run(run_name=display_name, nested=True, tags={"mlflow.parentRunId": parent_run_id}):
+            _log_model_to_mlflow(model_key, trained_model, evaluation_result)
 
         model_results[model_key] = {
             **evaluation_result,
@@ -278,11 +294,16 @@ def train_all_models() -> dict:
         "neural_network",
     )
     # Tracking centralizado utilizando la misma función
-    _log_model_to_mlflow("neural_network", trained_model, evaluation_result)
+    display_name = get_model_display_name("neural_network")
+    with mlflow.start_run(run_name=display_name, nested=True, tags={"mlflow.parentRunId": parent_run_id}):
+        _log_model_to_mlflow("neural_network", trained_model, evaluation_result)
+    
     model_results["neural_network"] = {
         **evaluation_result,
         "model_object": trained_model,
     }
+
+
     return {
         "model_results": model_results,
         "preprocessing_rules": preprocessing_rules,
@@ -333,36 +354,55 @@ def save_best_artifact(
 # Ejecuta de principio a fin todo el proceso de entrenamiento y guardado.
 def run_training_pipeline() -> dict:
     _ensure_output_directories()
-    training_output = train_all_models()
-    model_results = training_output["model_results"]
-    preprocessing_rules = training_output["preprocessing_rules"]
-    model_result_list = list(model_results.values())
-    comparison_dataframe = build_model_comparison(model_result_list)
-    comparative_roc_curve_path = export_comparative_roc_curve(
-        model_result_list,
-        config.COMPARATIVE_ROC_CURVE_PATH,
-    )
-    best_result = select_best_model(model_results)
-    best_confusion_matrix_path = export_confusion_matrix_figure(
-        best_result["model_name"],
-        np.array(best_result["confusion_matrix"]),
-        config.BEST_MODEL_CONFUSION_MATRIX_PATH,
-    )
-    random_forest_result = model_results["random_forest"]
-    random_forest_feature_importance_path = (
-        export_random_forest_feature_importance(
-            random_forest_result["model_object"],
-            config.RANDOM_FOREST_IMPORTANCE_PLOT_PATH,
+
+    mlflow.end_run() # Limpieza inicial
+
+    with mlflow.start_run(run_name="Hyperparameter Tuning (GridSearch)") as parent_run:
+        parent_id = parent_run.info.run_id
+
+        training_output = train_all_models(parent_run_id=parent_id)
+        model_results = training_output["model_results"]
+        preprocessing_rules = training_output["preprocessing_rules"]
+
+        model_result_list = list(model_results.values())
+        comparison_dataframe = build_model_comparison(model_result_list)
+        comparative_roc_curve_path = export_comparative_roc_curve(
+            model_result_list,
+            config.COMPARATIVE_ROC_CURVE_PATH,
         )
-    )
-    export_training_report(
-        comparison_dataframe,
-        config.TRAINING_REPORT_PATH,
-        best_result,
-        best_confusion_matrix_path,
-        random_forest_feature_importance_path,
-    )
-    save_best_artifact(best_result, preprocessing_rules)
+        best_result = select_best_model(model_results)
+        best_confusion_matrix_path = export_confusion_matrix_figure(
+            best_result["model_name"],
+            np.array(best_result["confusion_matrix"]),
+            config.BEST_MODEL_CONFUSION_MATRIX_PATH,
+        )
+        random_forest_result = model_results["random_forest"]
+        random_forest_feature_importance_path = (
+            export_random_forest_feature_importance(
+                random_forest_result["model_object"],
+                config.RANDOM_FOREST_IMPORTANCE_PLOT_PATH,
+            )
+        )
+        export_training_report(
+            comparison_dataframe,
+            config.TRAINING_REPORT_PATH,
+            best_result,
+            best_confusion_matrix_path,
+            random_forest_feature_importance_path,
+        )
+        save_best_artifact(best_result, preprocessing_rules)
+
+        with mlflow.start_run(run_name="📊 Final Global Report", nested=True, 
+            tags={"mlflow.parentRunId": parent_id}):
+                if config.COMPARATIVE_ROC_CURVE_PATH.exists():
+                    mlflow.log_artifact(str(config.COMPARATIVE_ROC_CURVE_PATH))
+                if config.BEST_MODEL_CONFUSION_MATRIX_PATH.exists():
+                    mlflow.log_artifact(str(config.BEST_MODEL_CONFUSION_MATRIX_PATH))
+                if config.RANDOM_FOREST_IMPORTANCE_PLOT_PATH.exists():
+                    mlflow.log_artifact(str(config.RANDOM_FOREST_IMPORTANCE_PLOT_PATH))
+                if config.TRAINING_REPORT_PATH.exists():
+                    mlflow.log_artifact(str(config.TRAINING_REPORT_PATH))
+
     return {
         "comparison_dataframe": comparison_dataframe,
         "best_result": best_result,
