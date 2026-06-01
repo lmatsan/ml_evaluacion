@@ -182,11 +182,22 @@ La tercera fase consistió en realizar una búsqueda exhaustiva de hiperparámet
 
 - **Interpretación de negocio:** La optimización estabilizó ambas métricas en rangos óptimos y controlados (ambas por encima del 69% en los mejores modelos), incrementando significativamente la robustez global del sistema medida a través de la métrica armónica _F1-Score_ y el área bajo la curva (_AUC-ROC_), que superó la barrera del 90%.
 
+#### Etapa 3: Feature Engineering
+
+Como parte del proceso de optimización, se exploró la creación de variables derivadas con el objetivo de mejorar la capacidad discriminativa de los modelos, priorizando aquellas basadas en las features de mayor importancia identificadas por Random Forest.
+
+Se evaluaron tres features candidatas:
+
+- cancellation_ratio: ratio entre cancelaciones previas y total de reservas históricas del cliente. Descartada antes del entrenamiento tras comprobar que el 94.6% de los clientes tenía cero cancelaciones previas y el 97% cero reservas previas no canceladas, convirtiendo la variable en una constante para la gran mayoría del dataset.
+- total_nights: suma de noches entre semana y de fin de semana. Probada tanto como adición a las variables originales como sustitución de estas. En ambos casos el AUC-ROC de Random Forest descendió respecto al baseline (0.9020 y 0.9051 respectivamente vs 0.9077), confirmando que la agregación no aportaba información adicional a la que los árboles ya capturaban internamente.
+- lead_time_x_adr: interacción multiplicativa entre las dos variables de mayor importancia. A diferencia de total_nights, no es una combinación lineal, sino que busca capturar el efecto conjunto de reservas caras hechas con mucha antelación. El resultado fue igualmente inferior al baseline (AUC 0.9053).
+
 **Conclusiones**
 
 1. **Modelo Baseline:** Utilizando la distribución nativa de los datos, los algoritmos mostraron un sesgo conservador. Aunque la precisión general era aceptable, el _Recall_ promedio fue deficiente (destacando el 43.9% en Random Forest). En términos hoteleros, el sistema era incapaz de detectar más de la mitad de las cancelaciones reales, anulando su valor predictivo.
 2. **Estrategia Balanceada:** La introducción de penalizaciones por peso (`class_weight='balanced'`) corrigió el sesgo de detección, elevando los niveles de _Recall_ por encima del 80%. No obstante, generó un efecto adverso de "falsas alarmas", reduciendo la precisión al entorno del 52%-58%. Para el hotel, operar con este modelo implicaría una tasa muy alta de errores de predicción, comprometiendo la confianza de la estrategia de _overbooking_.
 3. **Optimización con GridSearchCV:** La sintonización fina de hiperparámetros resolvió el conflicto analítico (_Precision-Recall Trade-Off_). Esta última fase estabilizó ambas métricas en rangos óptimos, incrementando significativamente la robustez global del sistema medida a través del área bajo la curva (_AUC-ROC_).
+4. **Feature Engineering**. El modelo baseline con AUC-ROC 0.9077 demostró estar ya bien optimizado para este dataset. Random Forest captura internamente las relaciones entre variables sin necesidad de transformaciones explícitas, lo cual es una de sus ventajas estructurales frente a modelos lineales. El proceso de feature engineering, aunque no mejoró las métricas, aportó valor analítico al confirmar la solidez del modelo base y descartar hipótesis de forma sistemática y medida.
 
 ### 5.2. Justificación del Modelo Elegido
 
