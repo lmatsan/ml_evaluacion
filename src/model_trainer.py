@@ -356,7 +356,7 @@ def run_training_pipeline() -> dict:
 
     mlflow.end_run() # Limpieza inicial
 
-    with mlflow.start_run(run_name="Feature Engineering: lead_time x adr") as parent_run:
+    with mlflow.start_run(run_name="Baseline_01062026") as parent_run:
         parent_id = parent_run.info.run_id
 
         training_output = train_all_models(parent_run_id=parent_id)

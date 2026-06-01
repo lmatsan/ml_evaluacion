@@ -81,8 +81,8 @@ NUMERIC_COLS = [
     "lead_time",
     "arrival_date_year",
     "arrival_date_day_of_month",
-    # "stays_in_weekend_nights",
-    # "stays_in_week_nights",
+    "stays_in_weekend_nights",
+    "stays_in_week_nights",
     "adults",
     "children",
     "babies",
@@ -98,7 +98,8 @@ NUMERIC_COLS = [
     "has_company",   
     "room_count", 
     # "cancellation_ratio",
-    "total_nights" ,
+    # "total_nights" ,
+    # "lead_time_x_adr",
 
     ]
 

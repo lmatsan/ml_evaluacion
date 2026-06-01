@@ -70,7 +70,7 @@ def load_clean_data(
     # --- Feature engineering ---
     # df = _add_cancellation_ratio(df)
     # df = _add_total_nights(df)
-    df = _add_lead_time_x_adr(df)
+    # df = _add_lead_time_x_adr(df)
 
     # ---------------------------
 
