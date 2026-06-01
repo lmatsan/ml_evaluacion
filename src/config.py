@@ -81,14 +81,14 @@ NUMERIC_COLS = [
     "lead_time",
     "arrival_date_year",
     "arrival_date_day_of_month",
-    "stays_in_weekend_nights",
-    "stays_in_week_nights",
+    # "stays_in_weekend_nights",
+    # "stays_in_week_nights",
     "adults",
     "children",
     "babies",
     "is_repeated_guest",
-    # "previous_cancellations",
-    # "previous_bookings_not_canceled",
+    "previous_cancellations",
+    "previous_bookings_not_canceled",
     "booking_changes",
     "days_in_waiting_list",
     "adr",
@@ -97,7 +97,9 @@ NUMERIC_COLS = [
     "has_agent",       
     "has_company",   
     "room_count", 
-    "cancellation_ratio",
+    # "cancellation_ratio",
+    "total_nights" ,
+
     ]
 
 CATEGORICAL_COLS = [

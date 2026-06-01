@@ -69,8 +69,9 @@ def load_clean_data(
     df = _collapse_duplicates(df)
     # --- Feature engineering ---
     # df = _add_cancellation_ratio(df)
-    df = _add_total_nights(df)
-    # df = _add_weekend_flag(df)
+    # df = _add_total_nights(df)
+    df = _add_lead_time_x_adr(df)
+
     # ---------------------------
 
     _validate_output(df)
@@ -216,9 +217,14 @@ def _add_cancellation_ratio(df: pd.DataFrame) -> pd.DataFrame:
 
 def _add_total_nights(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Agrega features derivadas de duración y composición del grupo.
+    Agrega feature derivada de duración de la estancia.
     """
     df["total_nights"] = (
         df["stays_in_weekend_nights"] + df["stays_in_week_nights"]
     )
+    return df
+
+def _add_lead_time_x_adr(df: pd.DataFrame) -> pd.DataFrame:
+    """ Agrega feature multiplicativa que combina lead_time y adr para capturar interacciones entre anticipación y precio. """
+    df["lead_time_x_adr"] = df["lead_time"] * df["adr"]
     return df
