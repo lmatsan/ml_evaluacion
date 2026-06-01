@@ -68,8 +68,8 @@ def load_clean_data(
     df = _remove_invalid_rows(df)
     df = _collapse_duplicates(df)
     # --- Feature engineering ---
-    df = _add_cancellation_ratio(df)
-    # df = _add_stay_features(df)
+    # df = _add_cancellation_ratio(df)
+    df = _add_total_nights(df)
     # df = _add_weekend_flag(df)
     # ---------------------------
 
@@ -206,10 +206,19 @@ def _validate_output(df: pd.DataFrame) -> None:
     if null_cols:
         logger.warning(f"Columnas con nulos tras limpieza: {null_cols}")
 
-    def _add_cancellation_ratio(df: pd.DataFrame) -> pd.DataFrame:
-        """ Ratio de cancelaciones históricas del cliente"""
-        df["cancellation_ratio"] = (
-            df["previous_cancellations"] /
-            (df["previous_cancellations"] + df["previous_bookings_not_canceled"] + 1)
-        )
-        return df
+def _add_cancellation_ratio(df: pd.DataFrame) -> pd.DataFrame:
+    """ Ratio de cancelaciones históricas del cliente"""
+    df["cancellation_ratio"] = (
+        df["previous_cancellations"] /
+        (df["previous_cancellations"] + df["previous_bookings_not_canceled"] + 1)
+    )
+    return df
+
+def _add_total_nights(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Agrega features derivadas de duración y composición del grupo.
+    """
+    df["total_nights"] = (
+        df["stays_in_weekend_nights"] + df["stays_in_week_nights"]
+    )
+    return df
