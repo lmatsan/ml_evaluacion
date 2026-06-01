@@ -67,6 +67,12 @@ def load_clean_data(
     df = _binarize_agent_company(df)
     df = _remove_invalid_rows(df)
     df = _collapse_duplicates(df)
+    # --- Feature engineering ---
+    # df = _add_cancellation_ratio(df)
+    # df = _add_total_nights(df)
+    # df = _add_lead_time_x_adr(df)
+
+    # ---------------------------
 
     _validate_output(df)
     logger.info(f"Registros tras limpieza: {len(df):,}")
@@ -200,3 +206,25 @@ def _validate_output(df: pd.DataFrame) -> None:
     null_cols = df.columns[df.isnull().any()].tolist()
     if null_cols:
         logger.warning(f"Columnas con nulos tras limpieza: {null_cols}")
+
+def _add_cancellation_ratio(df: pd.DataFrame) -> pd.DataFrame:
+    """ Ratio de cancelaciones históricas del cliente"""
+    df["cancellation_ratio"] = (
+        df["previous_cancellations"] /
+        (df["previous_cancellations"] + df["previous_bookings_not_canceled"] + 1)
+    )
+    return df
+
+def _add_total_nights(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Agrega feature derivada de duración de la estancia.
+    """
+    df["total_nights"] = (
+        df["stays_in_weekend_nights"] + df["stays_in_week_nights"]
+    )
+    return df
+
+def _add_lead_time_x_adr(df: pd.DataFrame) -> pd.DataFrame:
+    """ Agrega feature multiplicativa que combina lead_time y adr para capturar interacciones entre anticipación y precio. """
+    df["lead_time_x_adr"] = df["lead_time"] * df["adr"]
+    return df
