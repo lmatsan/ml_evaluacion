@@ -64,7 +64,7 @@ Crea y activa el entorno según tu sistema operativo:
 
 ```bash
 # Crear entorno (Asegúrate de usar Python 3.10)
-python -m venv venv
+py -3.10 -m venv venv
 
 # Activar en Linux / macOS
 source venv/bin/activate

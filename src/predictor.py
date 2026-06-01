@@ -1,18 +1,45 @@
+from datetime import datetime
+
 import joblib
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from src import config
 from src.data_loader import split_features_and_target
-from src.preprocessor import apply_fixed_preprocessing
-from src.preprocessor import apply_preprocessing_rules
-from src.preprocessor import clean_dataset
+from src.preprocessor import apply_train_rules
+# from src.preprocessor import apply_preprocessing_rules
+# from src.preprocessor import clean_dataset
 
 
 # Convierte una peticion individual en una tabla con una sola fila.
 def payload_to_dataframe(payload: dict) -> pd.DataFrame:
-    return pd.DataFrame([payload])
-
+    df = pd.DataFrame([payload])
+    # Creamos un diccionario rápido para traducir los meses a números
+    months_map = {
+        "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+        "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
+    }
+    try:
+        # Extraemos los valores del diccionario crudo
+        year = int(payload["arrival_date_year"])
+        month_str = payload["arrival_date_month"]
+        day = int(payload["arrival_date_day_of_month"])
+        
+        # Obtenemos el número del mes
+        month = months_map[month_str]
+        
+        # Calculamos la semana usando la librería nativa de Python (datetime)
+        # .isocalendar() devuelve (año, número_semana, día_semana). Tomamos el índice [1]
+        semana = datetime(year, month, day).isocalendar()[1]
+        
+        # Asignamos de forma segura al DataFrame
+        df["arrival_date_week_number"] = int(semana)
+        
+    except Exception as e:
+        raise ValueError(f"Error al calcular la semana del año. Verifica la fecha: {e}")
+        
+    # El return DEBE estar al final de toda la función, fuera del try/except
+    return df
 
 # Carga del disco el mejor modelo ya entrenado y sus reglas de preparacion.
 def load_best_model_artifact() -> dict:
@@ -66,16 +93,17 @@ def prepare_features(
     preprocessing_rules: dict,
 ) -> pd.DataFrame:
     df_raw = X.copy()
-    df_raw[config.TARGET_COLUMN] = 0
-    df_cleaned = clean_dataset(df_raw)
-    df_preprocessed = apply_fixed_preprocessing(df_cleaned)
-    df_model_input = apply_preprocessing_rules(
-        df_preprocessed,
-        preprocessing_rules,
-    )
+    df_raw[config.TARGET_COL] = 0
+
+    # Feature Engineering: 'agent' y 'company' vienen como None o ID. Si no es nulo ni NaN, es 1, si no 0.
+    df_raw["has_agent"] = df_raw["agent"].notna().astype(int)
+    df_raw["has_company"] = df_raw["company"].notna().astype(int)
+    df_raw["room_count"] = 1
+    # Aplicamos reglas reales de preprocesamiento (ADR, Países, etc.)
+    df_model_input = apply_train_rules(df_raw, preprocessing_rules)
     X, _ = split_features_and_target(
         df_model_input,
-        config.TARGET_COLUMN,
+        config.TARGET_COL,
     )
     if X.empty:
         raise ValueError("payload removed by preprocessing rules")
