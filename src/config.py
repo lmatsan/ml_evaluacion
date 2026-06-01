@@ -87,8 +87,8 @@ NUMERIC_COLS = [
     "children",
     "babies",
     "is_repeated_guest",
-    "previous_cancellations",
-    "previous_bookings_not_canceled",
+    # "previous_cancellations",
+    # "previous_bookings_not_canceled",
     "booking_changes",
     "days_in_waiting_list",
     "adr",
@@ -96,7 +96,8 @@ NUMERIC_COLS = [
     "total_of_special_requests",
     "has_agent",       
     "has_company",   
-    "room_count",    
+    "room_count", 
+    "cancellation_ratio",
     ]
 
 CATEGORICAL_COLS = [

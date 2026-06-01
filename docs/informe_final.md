@@ -31,7 +31,7 @@ Disponer de una predicción fiable aporta ventajas reales tanto para el negocio 
 
 ## 3. Análisis Exploratorio de Datos (EDA)
 
-El análisis exploratorio de este conjunto de datos se diseñó no solo para entender la distribución de las variables, sino para tomar decisiones estratégicas de limpieza y detectar comportamientos atípicos antes de entrenar los modelos. Tras una depuración inicial, el volumen de datos pasó de 119.390 registros originales a un ecosistema limpio de aproximadamente 84.555 registros para una clasificación binaria supervisada.
+El análisis exploratorio de este conjunto de datos se diseñó no solo para entender la distribución de las variables, sino para tomar decisiones estratégicas de limpieza y detectar comportamientos atípicos antes de entrenar los modelos. Tras una depuración inicial, el volumen de datos pasó de 119.390 registros originales a 84.555 registros.
 
 ### 3.1. Diagnóstico de Calidad, Duplicados y Data Leakage
 
@@ -166,7 +166,7 @@ Para corregir el problema anterior, se introdujeron penalizaciones por peso para
 | **Random Forest**       |  0.7531  |  0.5292   | 0.8611 | 0.6555 | 0.8811  |
 | **Logistic Regression** |  0.7506  |  0.5287   | 0.7908 | 0.6337 | 0.8426  |
 
-- **Interpretación de negocio:** La tortilla dio la vuelta por completo. Los niveles de _Recall_ se dispararon por encima del 80% (Random Forest llegó al 86.1%), pero generaron un efecto adverso de "falsas alarmas", desplomando la precisión general al entorno del 52%-58%. Operar con este modelo implicaría que el hotel daría por canceladas muchas reservas que en realidad eran seguras, provocando un _overbooking_ descontrolado que arruinaría la experiencia de clientes reales.
+- **Interpretación de negocio:** Los niveles de _Recall_ se dispararon por encima del 80% (Random Forest llegó al 86.1%), pero generaron un efecto adverso de "falsas alarmas", desplomando la precisión general al entorno del 52%-58%. Operar con este modelo implicaría que el hotel daría por canceladas muchas reservas que en realidad eran seguras, provocando un _overbooking_ descontrolado que arruinaría la experiencia de clientes reales.
 
 #### Etapa 3: Optimización con GridSearchCV (Ajuste Fino)
 
@@ -190,11 +190,11 @@ La tercera fase consistió en realizar una búsqueda exhaustiva de hiperparámet
 
 ### 5.2. Justificación del Modelo Elegido
 
-Tras realizar la optimización de toda la batería de algoritmos, se seleccionó **Random Forest** como el modelo definitivo para producción, fundamentado en los siguientes criterios científicos y de negocio:
+Tras realizar la optimización de toda la batería de algoritmos, se seleccionó **Random Forest** como el modelo definitivo para producción, fundamentado en los siguientes criterios:
 
 - **Puntuación F1 Superior (0.7139):** Al ser la media armónica entre precisión y sensibilidad, un F1-Score dominante demuestra que es el modelo más equilibrado y el que mejor mitiga tanto las falsas alarmas como las cancelaciones imprevistas.
 - **Maximización del Recall (0.7363):** En el contexto predictivo de cancelaciones, el coste de omitir una cancelación (Falso Negativo) suele ser más perjudicial para el inventario que lanzar una alerta errónea. Random Forest es capaz de capturar el 73.6% de las cancelaciones reales, superando en más de 11 puntos porcentuales a CatBoost (`0.6242`).
-- **Excelente Capacidad de Discriminación (AUC-ROC = 0.9077):** Un valor que roza el 91% en la curva ROC garantiza que el modelo separa las clases con una fiabilidad estadística sobresaliente, asegurando la estabilidad de la API en el entorno de producción (`predictor.py`).
+- **Excelente Capacidad de Discriminación (AUC-ROC = 0.9077):** Un valor que roza el 91% en la curva ROC garantiza que el modelo separa las clases con mucha fiabilidad, asegurando la estabilidad de la API en el entorno de producción (`predictor.py`).
 
 ## 6. Reflexión Crítica: Limitaciones y Mejoras Futuras
 
@@ -204,7 +204,7 @@ Aunque el sistema desarrollado ofrece un rendimiento robusto (con un AUC-ROC cer
 
 - **Incertidumbre en la gestión de duplicados:** Alrededor del 27% del dataset original consistía en registros idénticos. Aunque se resolvió de forma técnica agrupándolos y creando la variable `room_count` para proteger al modelo del _Data Leakage_, en el mundo real esto genera cierta ceguera de negocio. Al no disponer de un identificador único de usuario (_User ID_), no podemos saber con total certeza si esos duplicados eran errores del sistema de reservas o reservas masivas legítimas de grupos o turoperadores.
 - **Falta de contexto macroeconómico y temporal:** Las cancelaciones hoteleras dependen fuertemente de factores externos que no están presentes en las variables originales del dataframe. Cuestiones como la climatología imprevista, huelgas de aerolíneas, crisis de inflación o la fluctuación de tarifas de la competencia directa alteran drásticamente el comportamiento del cliente, y el modelo actual es ajeno a este contexto.
-- **Riesgo latente de Degradación del Modelo (_Data Drift_):** El turismo es un sector vivo que evoluciona por modas, cambios demográficos o la aparición de nuevos canales de venta. Un modelo entrenado con datos estáticos del pasado perderá precisión de forma progresiva a medida que las dinámicas del mercado turístico cambien.
+- **Riesgo latente de Degradación del Modelo (_Data Drift_):** El turismo es un sector vivo que evoluciona por modas, cambios demográficos o la aparición de nuevos canales de venta. Un modelo entrenado con datos estáticos del pasado puede quedar deprecado si no se vigila convenientemente.
 
 ### 6.2. Líneas de Mejora y Trabajo Futuro
 

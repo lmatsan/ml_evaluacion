@@ -67,6 +67,11 @@ def load_clean_data(
     df = _binarize_agent_company(df)
     df = _remove_invalid_rows(df)
     df = _collapse_duplicates(df)
+    # --- Feature engineering ---
+    df = _add_cancellation_ratio(df)
+    # df = _add_stay_features(df)
+    # df = _add_weekend_flag(df)
+    # ---------------------------
 
     _validate_output(df)
     logger.info(f"Registros tras limpieza: {len(df):,}")
@@ -200,3 +205,11 @@ def _validate_output(df: pd.DataFrame) -> None:
     null_cols = df.columns[df.isnull().any()].tolist()
     if null_cols:
         logger.warning(f"Columnas con nulos tras limpieza: {null_cols}")
+
+    def _add_cancellation_ratio(df: pd.DataFrame) -> pd.DataFrame:
+        """ Ratio de cancelaciones históricas del cliente"""
+        df["cancellation_ratio"] = (
+            df["previous_cancellations"] /
+            (df["previous_cancellations"] + df["previous_bookings_not_canceled"] + 1)
+        )
+        return df
