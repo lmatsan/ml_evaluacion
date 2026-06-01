@@ -38,8 +38,8 @@ def prepare_training_datasets() -> tuple[
     preprocessing_rules = _fit_train_rules(df_train)
     
     # Aplicar reglas calculadas a ambos conjuntos
-    df_train_proc = _apply_train_rules(df_train, preprocessing_rules)
-    df_validation_proc = _apply_train_rules(df_validation, preprocessing_rules)
+    df_train_proc = apply_train_rules(df_train, preprocessing_rules)
+    df_validation_proc = apply_train_rules(df_validation, preprocessing_rules)
     
     # 5. Separación en Features (X) y Target (y)
     X_train, y_train = split_features_and_target(df_train_proc, TARGET_COL)
@@ -100,7 +100,7 @@ def _fit_train_rules(df_train: pd.DataFrame) -> dict:
     }
 
 
-def _apply_train_rules(df: pd.DataFrame, rules: dict) -> pd.DataFrame:
+def apply_train_rules(df: pd.DataFrame, rules: dict) -> pd.DataFrame:
     """Aplica las reglas estadísticas calculadas en el set de Train."""
     df_out = df.copy()
     
